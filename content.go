@@ -4,15 +4,16 @@ import (
 	"errors"
 
 	"fmt"
-	"github.com/vostrok/contentd/db"
+
+	"github.com/vostrok/contentd/service"
 )
 
-func InitPackage(conf db.DataBaseConfig) {
-	db.InitDatabase(conf)
+func InitPackage(conf service.ContentServiceConfig) {
+	service.InitService(conf)
 
 }
-func GetContentByCampaignId(msisdn, campaignHash string) (s string, err error) {
-	contentUrl, err := db.GetContentByCampaignHash(msisdn, campaignHash)
+func GetContentByCampaignId(msisdn, campaignHash string, countryCode, opCode int) (s string, err error) {
+	contentUrl, err := service.GetContentByCampaignHash(msisdn, campaignHash, countryCode, opCode)
 	if err != nil {
 		return "", fmt.Errorf("GetContentByServiceId: %s", err.Error())
 	}

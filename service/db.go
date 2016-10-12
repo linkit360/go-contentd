@@ -1,4 +1,4 @@
-package db
+package service
 
 import (
 	"database/sql"
@@ -7,17 +7,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 )
-
-// TODO - add CQRs
-
-var d db
-
-type ContentInterface interface {
-	InitDatabase(dbConf DataBaseConfig)
-
-	GetServiceIdByCampaignHash(campaignHash string) (serviceId int64, err error)
-	GetContentByServiceId(serviceId int64) (contentHash string, err error)
-}
 
 type DataBaseConfig struct {
 	ConnMaxLifetime  int    `default:"-1" yaml:"conn_ttl"`
@@ -43,17 +32,12 @@ func (dbConfig DataBaseConfig) GetConnStr() string {
 	return dsn
 }
 
-type db struct {
-	db       *sql.DB
-	dbConfig DataBaseConfig
+func initDatabase(dbConf DataBaseConfig) {
+	ContentSvc.dbConfig = dbConf
+	ContentSvc.connect()
 }
 
-func InitDatabase(dbConf DataBaseConfig) {
-	d.dbConfig = dbConf
-	d.connect()
-}
-
-func (d *db) connect() {
+func (d *ContentService) connect() {
 
 	if d.db != nil {
 		return
@@ -62,7 +46,7 @@ func (d *db) connect() {
 	var err error
 	d.db, err = sql.Open("postgres", d.dbConfig.GetConnStr())
 	if err != nil {
-		fmt.Printf("open error %s, dsn: %s", err.Error())
+		fmt.Printf("open error %s, dsn: %s", err.Error(), d.dbConfig.GetConnStr())
 		log.WithField("error", err.Error()).Fatal("db connect")
 	}
 	if err = d.db.Ping(); err != nil {
