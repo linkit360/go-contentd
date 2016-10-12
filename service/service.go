@@ -11,6 +11,7 @@ import (
 )
 
 // TODO - add CQRs
+const ACTIVE_STATUS = 1
 
 var ContentSvc ContentService
 
@@ -23,18 +24,18 @@ type ContentInterface interface {
 func InitService(sConf ContentServiceConfig) {
 	initDatabase(sConf.dbConf)
 	ContentSvc.sConfig = sConf
-	ContentSvc.recordTransactionChan = make(chan MsgRecordTransaction)
+	ContentSvc.recordContentGiven = make(chan MsgRecordContent)
 
 	go func() {
-		transactionRecorder()
+		recordContentGiven()
 	}()
 }
 
 type ContentService struct {
-	db                    *sql.DB
-	dbConfig              DataBaseConfig
-	sConfig               ContentServiceConfig
-	recordTransactionChan chan MsgRecordTransaction
+	db                 *sql.DB
+	dbConfig           DataBaseConfig
+	sConfig            ContentServiceConfig
+	recordContentGiven chan MsgRecordContent
 }
 type ContentServiceConfig struct {
 	dbConf           DataBaseConfig `yaml:"db"`
@@ -43,16 +44,14 @@ type ContentServiceConfig struct {
 	TransactionType  int            `default:"1" yaml:"transaction_type"`
 	UniqDays         int            `default:"10" yaml:"uniq_days"` // content would be uniq in these days
 }
-type MsgRecordTransaction struct {
-	CapmaignHash string `json:"capmaign_hash"`
-	Msisdn       string `json:"msisdn"`
-	ContentId    int64  `json:"content_id"`
-	ServiceId    int64  `json:"service_id"`
-	CountryCode  int    `json:"country_code"`
-	OperatorCode int    `json:"operator_code"`
+type MsgRecordContent struct {
+	CapmaignHash   string `json:"capmaign_hash"`
+	CampaignId     int64  `json:"campaign_id"`
+	Msisdn         string `json:"msisdn"`
+	ContentId      int64  `json:"content_id"`
+	ServiceId      int64  `json:"service_id"`
+	SubscriptionId int64  `json:"subscription_id"`
 }
-
-const ACTIVE_STATUS = 1
 
 type CQRRequest struct {
 	Table string `json:"table,omitempty"`
@@ -68,6 +67,9 @@ func InitCQR() error {
 	if err := content.Reload(); err != nil {
 		return fmt.Errorf("content.Reload: %s", err.Error())
 	}
+	if err := subscriptions.Reload(); err != nil {
+		return fmt.Errorf("subscriptions.Reload: %s", err.Error())
+	}
 	if err := transactions.Reload(); err != nil {
 		return fmt.Errorf("transactions.Reload: %s", err.Error())
 	}
@@ -79,13 +81,14 @@ func InitCQR() error {
 // 1) find first avialable contentId
 // 2) reset cache if nothing found
 // 3) record transaction
-func GetContentByCampaignHash(msisdn, campaignHash string, countryCode, opCode int) (path string, err error) {
+func GetContentByCampaignHash(msisdn, campaignHash string) (path string, err error) {
 	logCtx := log.WithFields(log.Fields{"msisdn": msisdn, "campaignHash": campaignHash})
 
-	serviceId, ok := campaign.Map[campaignHash]
+	campaign, ok := campaign.Map[campaignHash]
 	if !ok {
 		return "", fmt.Errorf("CampaignHash: %s", "Not found")
 	}
+	serviceId := campaign.ServiceId
 	usedContentIds := transactions.Get(msisdn, serviceId)
 	logCtx.WithField("usedContentIds", usedContentIds)
 
@@ -139,14 +142,19 @@ findContentId:
 		}
 	}
 
+	s := Subscription{Msisdn: msisdn, ServiceId: serviceId}
+	subscriptionId, ok := subscriptions.Map[s.key()]
+	if !ok {
+		return "", fmt.Errorf("Get subscription: %s", "Not found")
+	}
+
 	// record transaction
-	ContentSvc.recordTransactionChan <- MsgRecordTransaction{
-		CapmaignHash: campaignHash,
-		Msisdn:       msisdn,
-		ContentId:    contentId,
-		ServiceId:    serviceId,
-		CountryCode:  countryCode,
-		OperatorCode: opCode,
+	ContentSvc.recordContentGiven <- MsgRecordContent{
+		Msisdn:         msisdn,
+		CampaignId:     campaign.Id,
+		ContentId:      contentId,
+		ServiceId:      serviceId,
+		SubscriptionId: subscriptionId,
 	}
 
 	return path, nil
@@ -289,15 +297,16 @@ var campaign = &Campaigns{}
 
 type Campaigns struct {
 	sync.RWMutex
-	Map map[string]int64
+	Map map[string]Campaign
 }
 type Campaign struct {
 	Hash      string
+	Id        int64
 	ServiceId int64
 }
 
 func (s Campaigns) Reload() error {
-	query := fmt.Sprintf("select hash, service_id_1 from %scampaigns where status = $1", ContentSvc.sConfig.TablePrefix)
+	query := fmt.Sprintf("select id, hash, service_id_1 from %scampaigns where status = $1", ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
 		return fmt.Errorf("QueryServices: %s, query: %s", err.Error(), query)
@@ -309,6 +318,7 @@ func (s Campaigns) Reload() error {
 		record := &Campaign{}
 
 		if err := rows.Scan(
+			&record.Id,
 			&record.Hash,
 			&record.ServiceId,
 		); err != nil {
@@ -325,7 +335,65 @@ func (s Campaigns) Reload() error {
 
 	s.Map = make(map[string]Campaign, len(records))
 	for _, campaign := range records {
-		s.Map[campaign.Hash] = campaign.ServiceId
+		s.Map[campaign.Hash] = campaign
+	}
+	return nil
+}
+
+// msisdn _ service_id ==> subscription_id
+
+// Keep in memory all active campaigns
+// Allow to get a subscription_id by msisdn and service_id
+// Reload when changes to subscriptions made
+// usage:
+// subscripions_id := subscripions.Map[ s.key() ]
+var subscriptions = &Subscriptions{}
+
+type Subscriptions struct {
+	sync.RWMutex
+	Map map[string]int64
+}
+type Subscription struct {
+	Msisdn         string
+	ServiceId      int64
+	SubscriptionId int64
+}
+
+func (s Subscription) key() string {
+	return fmt.Sprintf("%s-%d", s.Msisdn, s.ServiceId)
+}
+func (s Subscriptions) Reload() error {
+	query := fmt.Sprintf("select msisdn, id_service, id_subscription from "+
+		"%ssubscriptions where status = $1", ContentSvc.sConfig.TablePrefix)
+	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
+	if err != nil {
+		return fmt.Errorf("Subscriptions Query: %s, query: %s", err.Error(), query)
+	}
+	defer rows.Close()
+
+	var records []Subscription
+	for rows.Next() {
+		record := &Subscription{}
+
+		if err := rows.Scan(
+			&record.Msisdn,
+			&record.ServiceId,
+			&record.SubscriptionId,
+		); err != nil {
+			return nil, err
+		}
+		records = append(records, record)
+	}
+	if rows.Err() != nil {
+		return fmt.Errorf("Subscriptions Reload RowsError: %s", err.Error())
+	}
+
+	s.Lock()
+	defer s.Unlock()
+
+	s.Map = make(map[string]Subscription, len(records))
+	for _, subscription := range records {
+		s.Map[subscription.key()] = subscription.SubscriptionId
 	}
 	return nil
 }
@@ -445,35 +513,18 @@ func (s Transactions) Push(msisdn string, serviceId int64, contentId int64) {
 	s.Map[t.key()][contentId] = struct{}{}
 }
 
-func transactionRecorder() {
+func recordContentGiven() {
 
 	go func() {
 		for {
-			var msg MsgRecordTransaction
-			msg = <-ContentSvc.recordTransactionChan
+			var t MsgRecordContent
+			t = <-ContentSvc.recordContentGiven
 
-			t := Transaction{
-				Msisdn:         msg.Msisdn,
-				ServiceId:      msg.ServiceId,
-				ContentId:      msg.ContentId,
-				Type:           ContentSvc.sConfig.TransactionType,
-				CountryCode:    msg.CountryCode,
-				Status:         1, // success
-				OperatorCode:   msg.OperatorCode,
-				SubscriptionId: 0,
-			}
-
-			// get subscription id
-			// check if needed
-
-			query := "INSERT INTO %stransactions" +
-				" (tran_type, msisdn, country_code, id_service, status, " +
-				"operator_code, id_subscription, id_conteGt) " +
-				"values ($1, $2, $3, $4, $5, $6, $7, $8)"
+			query := "INSERT INTO %scontent_sent" +
+				" (msisdn, id_campaign, id_service, id_subscription, id_content) values ($1, $2, $3, $4, $5)"
 
 			_, err := ContentSvc.db.Exec(query,
-				t.Type, t.Msisdn, t.CountryCode, t.ServiceId, t.Status,
-				t.OperatorCode, t.SubscriptionId, t.ContentId)
+				t.Msisdn, t.CampaignId, t.ServiceId, t.SubscriptionId, t.ContentId)
 
 			if err != nil {
 				log.WithFields(log.Fields{"transaction": t, "error": err.Error()}).Error("add transaction")
