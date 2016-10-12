@@ -1,5 +1,9 @@
 package src
 
+// server has metrics, config, newrelic app
+// and handles rpc method to get content url by campaign hash
+// and another method to update cache on demand (CQR)
+// anyway, there is a http method to catch metrics
 import (
 	"net"
 	"runtime"
@@ -14,12 +18,14 @@ import (
 	"github.com/vostrok/contentd/server/src/handlers"
 	"github.com/vostrok/contentd/server/src/metrics"
 	"github.com/vostrok/contentd/server/src/newrelic"
+	"github.com/vostrok/contentd/service"
 )
 
 func Run() {
 	appConfig := config.LoadConfig()
 	metrics.Init()
 	newrelic.Init(appConfig.NewRelic)
+	service.InitService(appConfig.Service)
 
 	nuCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(nuCPU)

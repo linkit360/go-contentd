@@ -1,3 +1,7 @@
+// this file is only for database connection
+// since database/sql driver has a slot of connections, no need to make prepared queries if we do not know exactly,
+// that this prepared query would run on this exact connection
+// so, we just connecting to the database here
 package service
 
 import (

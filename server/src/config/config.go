@@ -11,17 +11,17 @@ import (
 )
 
 type ServerConfig struct {
-	Port        string `default:"70301"`
-	MetricsPort string `default:"70301" yaml:"metrics_port"`
+	Port        string `default:"70401"`
+	MetricsPort string `default:"70402" yaml:"metrics_port"`
 }
 type NewRelicConfig struct {
-	AppName string `default:"contentd"`
+	AppName string `default:"contentd.linkit360.com"`
 	License string `default:"4d635427ad90ca786ca2db6aa246ed651730b933"`
 }
 type AppConfig struct {
-	Server                       ServerConfig   `yaml:"server"`
-	NewRelic                     NewRelicConfig `yaml:"newrelic"`
-	service.ContentServiceConfig `yaml:"service"`
+	Server   ServerConfig                 `yaml:"server"`
+	NewRelic NewRelicConfig               `yaml:"newrelic"`
+	Service  service.ContentServiceConfig `yaml:"service"`
 }
 
 func LoadConfig() AppConfig {

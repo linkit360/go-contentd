@@ -1,5 +1,6 @@
 package rpcclient
 
+// rpc client for "github.com/vostrok/contentd/server"
 import (
 	"net"
 	"time"
@@ -15,7 +16,7 @@ type Client struct {
 	conf       RPCClientConfig
 }
 type RPCClientConfig struct {
-	DSN     string `default:"" yaml:"dsn"`
+	DSN     string `default:"localhost:70401" yaml:"dsn"`
 	Timeout int    `default:"10" yaml:"timeout"`
 }
 
@@ -35,7 +36,7 @@ func (c *Client) Get(msisdn, campaignHash string) (path string, err error) {
 	req := handlers.GetContentByCampaignIdRequest{Msisdn: msisdn, CampaignHash: campaignHash}
 	res := handlers.GetContentByCampaignIdResponse{}
 	if err = c.connection.Call("SVC.GetContentByCampaign", req, &res); err != nil {
-		return nil, err
+		return "", err
 	}
 	return res.ContentPath, err
 }
