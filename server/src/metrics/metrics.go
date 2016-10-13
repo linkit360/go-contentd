@@ -12,12 +12,15 @@ var M AppMetrics
 
 type AppMetrics struct {
 	RequestsOverall LocationMetric
+	CQRRequest      LocationMetric
 }
 
 func Init() AppMetrics {
 	M = AppMetrics{
 		RequestsOverall: NewLocationMetric("requests_overall"),
+		CQRRequest:      NewLocationMetric("cqr_request"),
 	}
+	return M
 }
 
 var quantiles = []int{50, 90, 95, 99}

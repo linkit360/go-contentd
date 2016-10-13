@@ -11,11 +11,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
 
-// TODO - add CQRs
 const ACTIVE_STATUS = 1
 
 var ContentSvc ContentService
@@ -23,14 +23,16 @@ var ContentSvc ContentService
 type ContentInterface interface {
 	InitService(sConf ContentServiceConfig)
 
-	GetContentByCampaignHash(msisdn, campaignHash string) (path string, err error)
+	GetUrlByCampaignHash(msisdn, campaignHash string) (path string, err error)
 }
 
 func InitService(sConf ContentServiceConfig) {
 	initDatabase(sConf.dbConf)
 	ContentSvc.sConfig = sConf
 	ContentSvc.recordContentGiven = make(chan MsgRecordContentSent)
-
+	if err := initCQR(); err != nil {
+		log.WithField("error", err.Error()).Fatal("INit CQR")
+	}
 	go func() {
 		recordContentGiven()
 	}()
@@ -40,6 +42,7 @@ type ContentService struct {
 	db                 *sql.DB
 	dbConfig           DataBaseConfig
 	sConfig            ContentServiceConfig
+	tables             map[string]struct{}
 	recordContentGiven chan MsgRecordContentSent
 }
 type ContentServiceConfig struct {
@@ -47,13 +50,10 @@ type ContentServiceConfig struct {
 	SearchRetryCount int            `default:"10" yaml:"retry_count"`
 	TablePrefix      string         `default:"xmp_" yaml:"table_prefix"`
 	UniqDays         int            `default:"10" yaml:"uniq_days"` // content would be uniq in these days
+	Tables           []string       `default:"campaign,service,content,service_content,subscriptions,content_sent" yaml:"tables"`
 }
 
-type CQRRequest struct {
-	Table string `json:"table,omitempty"`
-}
-
-func InitCQR() error {
+func initCQR() error {
 	if err := campaign.Reload(); err != nil {
 		return fmt.Errorf("campaign.Reload: %s", err.Error())
 	}
@@ -66,25 +66,73 @@ func InitCQR() error {
 	if err := subscriptions.Reload(); err != nil {
 		return fmt.Errorf("subscriptions.Reload: %s", err.Error())
 	}
-	if err := sentContent.Reload(); err != nil {
+	if err := contentSent.Reload(); err != nil {
 		return fmt.Errorf("sentContent.Reload: %s", err.Error())
 	}
+	ContentSvc.tables = make(map[string]struct{}, len(ContentSvc.sConfig.Tables))
+	for _, v := range ContentSvc.sConfig.Tables {
+		ContentSvc.tables[v] = struct{}{}
+	}
 	return nil
+}
+
+func CQR(table string) (bool, error) {
+	if len(table) == 0 {
+		log.WithField("error", "No table name given").Errorf("CQR request")
+		return false, nil
+	}
+	_, ok := ContentSvc.tables[table]
+	if !ok {
+		log.WithField("error", "table name doesn't match any").Errorf("CQR request")
+		return false, nil
+	}
+	// should we re-build content_service
+	switch table {
+	case "campaign":
+		if err := campaign.Reload(); err != nil {
+			return false, fmt.Errorf("campaign.Reload: %s", err.Error())
+		}
+	case "service":
+		if err := service.Reload(); err != nil {
+			return false, fmt.Errorf("service.Reload: %s", err.Error())
+		}
+	case "content":
+		if err := content.Reload(); err != nil {
+			return false, fmt.Errorf("content.Reload: %s", err.Error())
+		}
+	case "service_content":
+		if err := service.Reload(); err != nil {
+			return false, fmt.Errorf("service_content: service.Reload: %s", err.Error())
+		}
+	case "subscriptions":
+		if err := subscriptions.Reload(); err != nil {
+			return false, fmt.Errorf("subscriptions.Reload: %s", err.Error())
+		}
+	case "content_sent":
+		if err := contentSent.Reload(); err != nil {
+			return false, fmt.Errorf("sentContent.Reload: %s", err.Error())
+		}
+	default:
+		return false, fmt.Errorf("CQR Request: Unknown table: %s", table)
+	}
+
+	return true, nil
 }
 
 // Get Content by campaign hash
 // 1) find first avialable contentId
 // 2) reset cache if nothing found
 // 3) record that the content is shown to the user
-func GetContentByCampaignHash(msisdn, campaignHash string) (path string, err error) {
+func GetUrlByCampaignHash(msisdn, campaignHash string) (msg MsgRecordContentSent, err error) {
 	logCtx := log.WithFields(log.Fields{"msisdn": msisdn, "campaignHash": campaignHash})
 
 	campaign, ok := campaign.Map[campaignHash]
 	if !ok {
-		return "", fmt.Errorf("CampaignHash: %s", "Not found")
+		return msg, fmt.Errorf("CampaignHash: %s", "Not found")
 	}
+
 	serviceId := campaign.ServiceId
-	usedContentIds := sentContent.Get(msisdn, serviceId)
+	usedContentIds := contentSent.Get(msisdn, serviceId)
 	logCtx.WithField("usedContentIds", usedContentIds)
 
 	avialableContentIds := service.Get(serviceId)
@@ -92,37 +140,37 @@ func GetContentByCampaignHash(msisdn, campaignHash string) (path string, err err
 	if len(avialableContentIds) == 0 {
 		err = fmt.Errorf("No content for campaign %s at all", campaignHash)
 		logCtx.WithField("error", err.Error()).Errorf("No content avialabale")
-		return err
+		return msg, err
 	}
 
 	retry := 0
 findContentId:
 	// find first avialable contentId
-	contentId := 0
+	contentId := int64(0)
 	for id, _ := range avialableContentIds {
 		if usedContentIds != nil {
-			if _, ok := usedContentIds[id]; ok {
+			if _, ok := usedContentIds[int64(id)]; ok {
 				continue
 			}
 		}
-		contentId = id
+		contentId = int64(id)
 		break
 	}
 	// reset if nothing
 	if contentId == 0 {
 		logCtx.Debug("No content avialable, reset remembered cache..")
-		sentContent.Clear(msisdn, serviceId)
+		contentSent.Clear(msisdn, serviceId)
 		for id, _ := range avialableContentIds {
-			contentId = id
+			contentId = int64(id)
 			break
 		}
 
 	}
 	// update in-memory cache usedContentIds
-	sentContent.Push(msisdn, serviceId, contentId)
+	contentSent.Push(msisdn, serviceId, contentId)
 	logCtx.WithField("ContentId", contentId).Debug("choosen content")
 
-	path, ok = content.Map[contentId]
+	path, ok := content.Map[contentId]
 	if !ok {
 		if retry < ContentSvc.sConfig.SearchRetryCount {
 			retry++
@@ -133,32 +181,34 @@ findContentId:
 			err = fmt.Errorf("Failed to find valid contentId: campaign: %s, msisdn: %s", campaignHash, msisdn)
 			logCtx.WithFields(log.Fields{"ContentId": contentId, "Retry": retry}).
 				Error(err.Error())
-			return "", err
+			return msg, err
 		}
 	}
 
 	s := Subscription{Msisdn: msisdn, ServiceId: serviceId}
 	subscriptionId, ok := subscriptions.Map[s.key()]
 	if !ok {
-		return "", fmt.Errorf("Get subscription: %s", "Not found")
+		return msg, fmt.Errorf("Get subscription: %s", "Not found")
 	}
 
-	// record sent content
-	ContentSvc.recordContentGiven <- MsgRecordContentSent{
+	msg = MsgRecordContentSent{
 		Msisdn:         msisdn,
+		ContentPath:    path,
 		CampaignId:     campaign.Id,
 		ContentId:      contentId,
 		ServiceId:      serviceId,
 		SubscriptionId: subscriptionId,
 	}
+	// record sent content
+	ContentSvc.recordContentGiven <- msg
 
-	return path, nil
+	return msg, nil
 }
 
 // Tasks:
 // Keep in memory all active service to content mapping
 // Allow to get all content ids of given service id
-// Reload when changes to xmp_service_content or xmp_service are done
+// Reload when changes to service_content or service are done
 var service = &Services{}
 
 type Services struct {
@@ -181,7 +231,7 @@ func (s Services) Reload() error {
 	query := fmt.Sprintf("select id from %sservices where status = $1", ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
-		return fmt.Errorf("xmp_services QueryServices: %s, query: %s", err.Error(), query)
+		return fmt.Errorf("services QueryServices: %s, query: %s", err.Error(), query)
 	}
 	defer rows.Close()
 
@@ -191,7 +241,7 @@ func (s Services) Reload() error {
 		if err := rows.Scan(
 			&serviceId,
 		); err != nil {
-			return nil, err
+			return err
 		}
 		serviceIds = append(serviceIds, serviceId)
 	}
@@ -209,7 +259,7 @@ func (s Services) Reload() error {
 		ContentSvc.sConfig.TablePrefix, strings.Join(placeHoldersForServiceIds, ", "))
 	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS, serviceIds)
 	if err != nil {
-		return fmt.Errorf("xmp_service_content QueryServices: %s, query: %s", err.Error(), query)
+		return fmt.Errorf("service_content QueryServices: %s, query: %s", err.Error(), query)
 	}
 	defer rows.Close()
 
@@ -220,20 +270,23 @@ func (s Services) Reload() error {
 			&serviceContent.IdService,
 			&serviceContent.IdContent,
 		); err != nil {
-			return nil, err
+			return err
 		}
 		serviceMap = append(serviceMap, serviceContent)
 	}
 	if rows.Err() != nil {
-		return fmt.Errorf("xmp_service_content RowsError: %s", err.Error())
+		return fmt.Errorf("service_content RowsError: %s", err.Error())
 	}
 
 	s.Lock()
 	defer s.Unlock()
 
-	s.Map = make(map[string][]Content)
+	s.Map = make(map[int64][]int64)
 	for _, service := range serviceMap {
-		s.Map[service] = append(service.IdContent)
+		if _, ok := s.Map[service.IdService]; !ok {
+			s.Map[service.IdService] = []int64{}
+		}
+		s.Map[service.IdService] = append(s.Map[service.IdService], service.IdContent)
 	}
 	return nil
 }
@@ -246,7 +299,7 @@ func (s Services) Get(serviceId int64) (contentIds []int64) {
 // Tasks:
 // Keep in memory all active content_ids mapping to their object string (url path to content)
 // Allow to get object for given content id
-// Reload when changes to xmp_content
+// Reload when changes to content
 var content = &Contents{}
 
 type Contents struct {
@@ -258,7 +311,7 @@ func (s Contents) Reload() error {
 	query := fmt.Sprintf("select id from %scontent where status = $1", ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
-		return fmt.Errorf("xmp_content QueryServices: %s, query: %s", err.Error(), query)
+		return fmt.Errorf("content QueryServices: %s, query: %s", err.Error(), query)
 	}
 	defer rows.Close()
 
@@ -266,7 +319,7 @@ func (s Contents) Reload() error {
 	for rows.Next() {
 		var c Content
 		if err := rows.Scan(&c.Id, &c.Object); err != nil {
-			return nil, err
+			return err
 		}
 		contents = append(contents, c)
 	}
@@ -277,7 +330,7 @@ func (s Contents) Reload() error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.Map = make(map[string][]Content)
+	s.Map = make(map[int64]string)
 	for _, content := range contents {
 		s.Map[content.Id] = content.Object
 	}
@@ -310,14 +363,14 @@ func (s Campaigns) Reload() error {
 
 	var records []Campaign
 	for rows.Next() {
-		record := &Campaign{}
+		record := Campaign{}
 
 		if err := rows.Scan(
 			&record.Id,
 			&record.Hash,
 			&record.ServiceId,
 		); err != nil {
-			return nil, err
+			return err
 		}
 		records = append(records, record)
 	}
@@ -368,14 +421,14 @@ func (s Subscriptions) Reload() error {
 
 	var records []Subscription
 	for rows.Next() {
-		record := &Subscription{}
+		record := Subscription{}
 
 		if err := rows.Scan(
 			&record.Msisdn,
 			&record.ServiceId,
 			&record.SubscriptionId,
 		); err != nil {
-			return nil, err
+			return err
 		}
 		records = append(records, record)
 	}
@@ -386,14 +439,14 @@ func (s Subscriptions) Reload() error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.Map = make(map[string]Subscription, len(records))
+	s.Map = make(map[string]int64, len(records))
 	for _, subscription := range records {
 		s.Map[subscription.key()] = subscription.SubscriptionId
 	}
 	return nil
 }
 
-var sentContent = &SentContents{}
+var contentSent = &SentContents{}
 
 // When updating from database, reading is forbidden
 // Map structure: map [ msisdn + service_id ] []content_id
@@ -402,13 +455,14 @@ var sentContent = &SentContents{}
 // * content_id is content that was shown to msisdn
 type SentContents struct {
 	sync.RWMutex
-	Map map[string][]int64
+	Map map[string]map[int64]struct{}
 }
 
 // sent content Data that neded to build in-memory cache of used content-ids
 // and alos need for recording "got content"
 type MsgRecordContentSent struct {
 	Msisdn         string `json:"msisdn"`
+	ContentPath    string `json:"content_path"`
 	CapmaignHash   string `json:"capmaign_hash"`
 	CampaignId     int64  `json:"campaign_id"`
 	ContentId      int64  `json:"content_id"`
@@ -420,7 +474,7 @@ type MsgRecordContentSent struct {
 // when key == msisdn, then uniq content exactly
 // when key == msisdn + service+id, then unique content per sevice
 func (t MsgRecordContentSent) key() string {
-	return t.Msisdn + "-" + strconv.Atoi(t.ServiceId)
+	return t.Msisdn + "-" + strconv.FormatInt(t.ServiceId, 10)
 }
 
 // Load sent contents to filter content that had been seen by the msisdn.
@@ -440,14 +494,14 @@ func (s SentContents) Reload() error {
 
 	var records []MsgRecordContentSent
 	for rows.Next() {
-		record := &MsgRecordContentSent{}
+		record := MsgRecordContentSent{}
 
 		if err := rows.Scan(
 			&record.Msisdn,
 			&record.ServiceId,
 			&record.ContentId,
 		); err != nil {
-			return nil, err
+			return err
 		}
 		records = append(records, record)
 	}
@@ -458,12 +512,10 @@ func (s SentContents) Reload() error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.Map = make(map[string]map[int64]map[int64]struct{})
+	s.Map = make(map[string]map[int64]struct{})
 	for _, sentContent := range records {
-
-		// key == msisdn + service_id, contains content_ids
 		if _, ok := s.Map[sentContent.key()]; !ok {
-			s.Map[sentContent.key()] = make(map[string]struct{})
+			s.Map[sentContent.key()] = make(map[int64]struct{})
 		}
 		s.Map[sentContent.key()][sentContent.ContentId] = struct{}{}
 	}
@@ -501,6 +553,8 @@ func (s SentContents) Push(msisdn string, serviceId int64, contentId int64) {
 	s.Map[t.key()][contentId] = struct{}{}
 }
 
+// Read from channel and insert records into the database.
+// In case of any error, re-put message of content_sent into the channel
 func recordContentGiven() {
 
 	go func() {
@@ -515,7 +569,11 @@ func recordContentGiven() {
 				t.Msisdn, t.CampaignId, t.ServiceId, t.SubscriptionId, t.ContentId)
 
 			if err != nil {
+				// we assume that the query and data are ok
+				// so if database is buzy, whe wait until it ok
 				log.WithFields(log.Fields{"sentContent": t, "error": err.Error()}).Error("add sent content")
+				ContentSvc.recordContentGiven <- t
+				time.Sleep(time.Second)
 			}
 		}
 	}()

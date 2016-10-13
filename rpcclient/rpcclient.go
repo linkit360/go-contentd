@@ -9,6 +9,7 @@ import (
 	"net/rpc/jsonrpc"
 
 	"github.com/vostrok/contentd/server/src/handlers"
+	"github.com/vostrok/contentd/service"
 )
 
 type Client struct {
@@ -31,12 +32,22 @@ func NewClient(dsn string, timeout time.Duration) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) Get(msisdn, campaignHash string) (path string, err error) {
+func (c *Client) Get(msisdn, campaignHash string) (msg service.MsgRecordContentSent, err error) {
 
 	req := handlers.GetContentByCampaignIdRequest{Msisdn: msisdn, CampaignHash: campaignHash}
 	res := handlers.GetContentByCampaignIdResponse{}
 	if err = c.connection.Call("SVC.GetContentByCampaign", req, &res); err != nil {
-		return "", err
+		return msg, err
 	}
-	return res.ContentPath, err
+	return res.Msg, err
+}
+
+func (c *Client) CQR(table string) (success bool, err error) {
+
+	req := handlers.CQRRequest{Table: table}
+	res := handlers.CQRResponse{}
+	if err = c.connection.Call("SVC.GetContentByCampaign", req, &res); err != nil {
+		return res, err
+	}
+	return res.Success, err
 }

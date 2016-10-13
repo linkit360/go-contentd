@@ -14,7 +14,7 @@ import (
 
 type DataBaseConfig struct {
 	ConnMaxLifetime  int    `default:"-1" yaml:"conn_ttl"`
-	MaxOpenConns     int    `default:"1" yaml:"max_conns"`
+	MaxOpenConns     int    `default:"15" yaml:"max_conns"`
 	ReconnectTimeout int    `default:"10" yaml:"timeout"`
 	User             string `default:""`
 	Pass             string `default:""`
@@ -62,6 +62,6 @@ func (d *ContentService) connect() {
 	d.db.SetConnMaxLifetime(time.Second * time.Duration(d.dbConfig.ConnMaxLifetime))
 
 	log.WithFields(log.Fields{
-		"host", d.dbConfig.Host, "dbname", d.dbConfig.Name, "user", d.dbConfig.User}).Debug("database connected")
+		"host": d.dbConfig.Host, "dbname": d.dbConfig.Name, "user": d.dbConfig.User}).Debug("database connected")
 	return
 }
