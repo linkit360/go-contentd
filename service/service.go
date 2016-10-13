@@ -7,6 +7,7 @@ package service
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -29,7 +30,7 @@ type ContentInterface interface {
 func InitService(sConf ContentServiceConfig) {
 	initDatabase(sConf.dbConf)
 	ContentSvc.sConfig = sConf
-	ContentSvc.recordContentGiven = make(chan MsgRecordContentSent)
+	ContentSvc.recordContentGiven = make(chan *ContentSentProperties)
 	if err := initCQR(); err != nil {
 		log.WithField("error", err.Error()).Fatal("INit CQR")
 	}
@@ -43,7 +44,7 @@ type ContentService struct {
 	dbConfig           DataBaseConfig
 	sConfig            ContentServiceConfig
 	tables             map[string]struct{}
-	recordContentGiven chan MsgRecordContentSent
+	recordContentGiven chan *ContentSentProperties
 }
 type ContentServiceConfig struct {
 	dbConf           DataBaseConfig `yaml:"db"`
@@ -119,27 +120,45 @@ func CQR(table string) (bool, error) {
 	return true, nil
 }
 
+type GetUrlByCampaignHashParams struct {
+	Msisdn       string
+	CampaignHash string
+	CountryCode  int64
+	OperatorCode int64
+}
+
 // Get Content by campaign hash
 // 1) find first avialable contentId
 // 2) reset cache if nothing found
 // 3) record that the content is shown to the user
-func GetUrlByCampaignHash(msisdn, campaignHash string) (msg MsgRecordContentSent, err error) {
-	logCtx := log.WithFields(log.Fields{"msisdn": msisdn, "campaignHash": campaignHash})
+func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentProperties, err error) {
+	logCtx := log.WithFields(log.Fields{
+		"msisdn":       p.Msisdn,
+		"campaignHash": p.CampaignHash,
+		"CountryCode":  p.CountryCode,
+		"OperatorCode": p.OperatorCode,
+	})
 
-	campaign, ok := campaign.Map[campaignHash]
+	if p.Msisdn == "" || p.CampaignHash == "" || p.CountryCode == 0 || p.OperatorCode == 0 {
+		err = errors.New("Empty required params")
+		logCtx.WithField("error", err.Error()).Errorf("No required params")
+	}
+	campaign, ok := campaign.Map[p.CampaignHash]
 	if !ok {
+		err = errors.New("Not found")
+		logCtx.WithField("error", err.Error()).Errorf("get campaign by campaign hash")
 		return msg, fmt.Errorf("CampaignHash: %s", "Not found")
 	}
 
 	serviceId := campaign.ServiceId
-	usedContentIds := contentSent.Get(msisdn, serviceId)
+	usedContentIds := contentSent.Get(p.Msisdn, serviceId)
 	logCtx.WithField("usedContentIds", usedContentIds)
 
 	avialableContentIds := service.Get(serviceId)
 	logCtx.WithField("avialableContentIds", avialableContentIds)
 	if len(avialableContentIds) == 0 {
-		err = fmt.Errorf("No content for campaign %s at all", campaignHash)
-		logCtx.WithField("error", err.Error()).Errorf("No content avialabale")
+		err = fmt.Errorf("No content for campaign %s at all", p.CampaignHash)
+		logCtx.WithField("error", err.Error()).Errorf("No content avialabale at all")
 		return msg, err
 	}
 
@@ -159,7 +178,7 @@ findContentId:
 	// reset if nothing
 	if contentId == 0 {
 		logCtx.Debug("No content avialable, reset remembered cache..")
-		contentSent.Clear(msisdn, serviceId)
+		contentSent.Clear(p.Msisdn, serviceId)
 		for id, _ := range avialableContentIds {
 			contentId = int64(id)
 			break
@@ -167,7 +186,7 @@ findContentId:
 
 	}
 	// update in-memory cache usedContentIds
-	contentSent.Push(msisdn, serviceId, contentId)
+	contentSent.Push(p.Msisdn, serviceId, contentId)
 	logCtx.WithField("ContentId", contentId).Debug("choosen content")
 
 	path, ok := content.Map[contentId]
@@ -178,26 +197,21 @@ findContentId:
 				Error("Service ContentId not found in content")
 			goto findContentId
 		} else {
-			err = fmt.Errorf("Failed to find valid contentId: campaign: %s, msisdn: %s", campaignHash, msisdn)
+			err = fmt.Errorf("Failed to find valid contentId: campaign: %s, msisdn: %s", p.CampaignHash, p.Msisdn)
 			logCtx.WithFields(log.Fields{"ContentId": contentId, "Retry": retry}).
 				Error(err.Error())
 			return msg, err
 		}
 	}
 
-	s := Subscription{Msisdn: msisdn, ServiceId: serviceId}
-	subscriptionId, ok := subscriptions.Map[s.key()]
-	if !ok {
-		return msg, fmt.Errorf("Get subscription: %s", "Not found")
-	}
-
-	msg = MsgRecordContentSent{
-		Msisdn:         msisdn,
-		ContentPath:    path,
-		CampaignId:     campaign.Id,
-		ContentId:      contentId,
-		ServiceId:      serviceId,
-		SubscriptionId: subscriptionId,
+	msg = &ContentSentProperties{
+		Msisdn:       p.Msisdn,
+		ContentPath:  path,
+		CampaignId:   campaign.Id,
+		ContentId:    contentId,
+		ServiceId:    serviceId,
+		CountryCode:  p.CountryCode,
+		OperatorCode: p.OperatorCode,
 	}
 	// record sent content
 	ContentSvc.recordContentGiven <- msg
@@ -354,7 +368,8 @@ type Campaign struct {
 }
 
 func (s Campaigns) Reload() error {
-	query := fmt.Sprintf("select id, hash, service_id_1 from %scampaigns where status = $1", ContentSvc.sConfig.TablePrefix)
+	query := fmt.Sprintf("select id, hash, service_id_1 from %scampaigns where status = $1",
+		ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
 		return fmt.Errorf("QueryServices: %s, query: %s", err.Error(), query)
@@ -460,7 +475,7 @@ type SentContents struct {
 
 // sent content Data that neded to build in-memory cache of used content-ids
 // and alos need for recording "got content"
-type MsgRecordContentSent struct {
+type ContentSentProperties struct {
 	Msisdn         string `json:"msisdn"`
 	ContentPath    string `json:"content_path"`
 	CapmaignHash   string `json:"capmaign_hash"`
@@ -468,12 +483,14 @@ type MsgRecordContentSent struct {
 	ContentId      int64  `json:"content_id"`
 	ServiceId      int64  `json:"service_id"`
 	SubscriptionId int64  `json:"subscription_id"`
+	CountryCode    int64  `json:"country_code"`
+	OperatorCode   int64  `json:"operator_code"`
 }
 
 // Used to get a key of used content ids
 // when key == msisdn, then uniq content exactly
 // when key == msisdn + service+id, then unique content per sevice
-func (t MsgRecordContentSent) key() string {
+func (t ContentSentProperties) key() string {
 	return t.Msisdn + "-" + strconv.FormatInt(t.ServiceId, 10)
 }
 
@@ -492,9 +509,9 @@ func (s SentContents) Reload() error {
 	}
 	defer rows.Close()
 
-	var records []MsgRecordContentSent
+	var records []ContentSentProperties
 	for rows.Next() {
-		record := MsgRecordContentSent{}
+		record := ContentSentProperties{}
 
 		if err := rows.Scan(
 			&record.Msisdn,
@@ -528,7 +545,7 @@ func (s SentContents) Reload() error {
 // then it had used as different contens! And will shown
 func (s SentContents) Get(msisdn string, serviceId int64) (contentIds map[int64]struct{}) {
 	var ok bool
-	t := MsgRecordContentSent{Msisdn: msisdn, ServiceId: serviceId}
+	t := ContentSentProperties{Msisdn: msisdn, ServiceId: serviceId}
 	if contentIds, ok = s.Map[t.key()]; ok {
 		return contentIds
 	}
@@ -538,7 +555,7 @@ func (s SentContents) Get(msisdn string, serviceId int64) (contentIds map[int64]
 // When there is no content avialabe for the msisdn, reset the content counter
 // Breakes after reloading sent content table (on the restart of the application)
 func (s SentContents) Clear(msisdn string, serviceId int64) {
-	t := MsgRecordContentSent{Msisdn: msisdn, ServiceId: serviceId}
+	t := ContentSentProperties{Msisdn: msisdn, ServiceId: serviceId}
 	delete(s.Map, t.key())
 }
 
@@ -546,7 +563,7 @@ func (s SentContents) Clear(msisdn string, serviceId int64) {
 // we notice it in sent content table (another place)
 // and also we need to update in-memory cache of used content id for this msisdn and service id
 func (s SentContents) Push(msisdn string, serviceId int64, contentId int64) {
-	t := MsgRecordContentSent{Msisdn: msisdn, ServiceId: serviceId}
+	t := ContentSentProperties{Msisdn: msisdn, ServiceId: serviceId}
 	if _, ok := s.Map[t.key()]; !ok {
 		s.Map[t.key()] = make(map[int64]struct{})
 	}
@@ -555,23 +572,80 @@ func (s SentContents) Push(msisdn string, serviceId int64, contentId int64) {
 
 // Read from channel and insert records into the database.
 // In case of any error, re-put message of content_sent into the channel
+// we assume that the query and data are ok
+// so if database is buzy, whe wait until it ok
 func recordContentGiven() {
 
 	go func() {
 		for {
-			var t MsgRecordContentSent
+			var t *ContentSentProperties
 			t = <-ContentSvc.recordContentGiven
 
-			query := "INSERT INTO %scontent_sent" +
-				" (msisdn, id_campaign, id_service, id_subscription, id_content) values ($1, $2, $3, $4, $5)"
+			if t.SubscriptionId == 0 {
+				s := Subscription{Msisdn: t.Msisdn, ServiceId: t.ServiceId}
+				var ok bool
+				t.SubscriptionId, ok = subscriptions.Map[s.key()]
+				if !ok {
+					// do not set id_subscriber: msisdn is unique enough
+					query := fmt.Sprintf("INSERT INTO %ssubscriptions ( "+
+						"status, "+
+						"id_campaign, "+
+						"id_service, "+
+						"msisdn, "+
+						"country_code, "+
+						"operator_code) "+
+						" values ($1, $2, $3, $4, $5, $6) RETURNING id",
+						ContentSvc.sConfig.TablePrefix)
 
-			_, err := ContentSvc.db.Exec(query,
-				t.Msisdn, t.CampaignId, t.ServiceId, t.SubscriptionId, t.ContentId)
+					if err := ContentSvc.db.QueryRow(query,
+						";",
+						t.CampaignId,
+						t.ServiceId,
+						t.Msisdn,
+						t.CountryCode,
+						t.OperatorCode,
+					).Scan(&t.SubscriptionId); err != nil {
+						ContentSvc.recordContentGiven <- t
 
-			if err != nil {
-				// we assume that the query and data are ok
-				// so if database is buzy, whe wait until it ok
-				log.WithFields(log.Fields{"sentContent": t, "error": err.Error()}).Error("add sent content")
+						log.WithFields(log.Fields{
+							"error":        err.Error(),
+							"subscription": t}).
+							Error("add new subscription")
+						time.Sleep(time.Second)
+						continue
+					}
+				}
+			}
+			if t.SubscriptionId == 0 {
+				log.WithFields(log.Fields{
+					"error":        "UNEXPECTED CODE REACHED",
+					"subscription": t}).
+					Error("add content sent")
+			}
+
+			query := fmt.Sprintf("INSERT INTO %scontent_sent ("+
+				"msisdn, "+
+				"id_campaign, "+
+				"id_service, "+
+				"id_subscription, "+
+				"id_content, "+
+				"country_code, "+
+				"operator_code)"+
+				" values ($1, $2, $3, $4, $5)", ContentSvc.sConfig.TablePrefix)
+
+			if _, err := ContentSvc.db.Exec(query,
+				t.Msisdn,
+				t.CampaignId,
+				t.ServiceId,
+				t.SubscriptionId,
+				t.ContentId,
+				t.CountryCode,
+				t.OperatorCode,
+			); err != nil {
+				log.WithFields(log.Fields{
+					"content": t,
+					"error":   err.Error()}).
+					Error("add sent content")
 				ContentSvc.recordContentGiven <- t
 				time.Sleep(time.Second)
 			}

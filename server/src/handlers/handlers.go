@@ -10,28 +10,21 @@ import (
 
 type RPCContentService struct{}
 
-type GetContentByCampaignIdRequest struct {
-	Msisdn       string
-	CampaignHash string
-}
-type GetContentByCampaignIdResponse struct {
-	Msg service.MsgRecordContentSent
-}
+func (rpc *RPCContentService) GetContentByCampaign(
+	req service.GetUrlByCampaignHashParams, res *service.ContentSentProperties) (err error) {
 
-func (rpc *RPCContentService) GetContentByCampaign(req GetContentByCampaignIdRequest, res *GetContentByCampaignIdResponse) (err error) {
 	begin := time.Now()
 	defer func() {
 		metrics.M.RequestsOverall.Time.CatchOverTime(time.Since(begin), time.Second)
 	}()
 	metrics.M.RequestsOverall.Count.Add(1)
 
-	contentProperties, err := service.GetUrlByCampaignHash(req.Msisdn, req.CampaignHash)
+	res, err = service.GetUrlByCampaignHash(req)
 	if err != nil {
 		metrics.M.RequestsOverall.Errors.Add(1)
 		return fmt.Errorf("GetContentByServiceId: %s", err.Error())
 	}
 
-	res.Msg = contentProperties
 	return nil
 }
 
