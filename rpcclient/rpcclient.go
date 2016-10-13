@@ -21,14 +21,14 @@ type RPCClientConfig struct {
 	Timeout int    `default:"10" yaml:"timeout"`
 }
 
-func NewClient(dsn string, timeout time.Duration) (*Client, error) {
-	connection, err := net.DialTimeout("tcp", dsn, timeout)
+func NewClient(dsn string, timeoutSeconds int) (*Client, error) {
+	connection, err := net.DialTimeout("tcp", dsn, time.Duration(timeoutSeconds)*time.Second)
 	if err != nil {
 		return nil, err
 	}
 	return &Client{
 		connection: jsonrpc.NewClient(connection),
-		conf:       RPCClientConfig{DSN: dsn, Timeout: timeout},
+		conf:       RPCClientConfig{DSN: dsn, Timeout: timeoutSeconds},
 	}, nil
 }
 
@@ -47,7 +47,7 @@ func (c *Client) CQR(table string) (success bool, err error) {
 	req := handlers.CQRRequest{Table: table}
 	res := handlers.CQRResponse{}
 	if err = c.connection.Call("SVC.GetContentByCampaign", req, &res); err != nil {
-		return res, err
+		return false, err
 	}
 	return res.Success, err
 }
