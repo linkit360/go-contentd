@@ -1,0 +1,36 @@
+server:
+  port: 70301
+  metrics_port: 70302
+
+newrelic:
+  appname: conetntd.linkit360.com
+  license: 4d635427ad90ca786ca2db6aa246ed651730b933
+
+service:
+  retry_count: 10
+  table_prefix: xmp_
+  uniq_days: 10
+  tables:
+  - campaign
+  - service
+  - content
+  - service_content
+  - subscriptions
+  - content_sent
+
+  db:
+    conn_ttl: -1
+    max_conns: 15
+    timeout: 30
+    name:
+    user:
+    pass:
+    port:
+    host:
+    table_prefix: xmp_
+
+  notifier:
+    queues:
+      content_sent: content_sent
+    url: http://sfsfdrbmqfssdf
+    chan_gap: 10000000

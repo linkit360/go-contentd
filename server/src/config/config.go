@@ -37,6 +37,13 @@ func LoadConfig() AppConfig {
 	}
 
 	appConfig.Server.Port = envString("PORT", appConfig.Server.Port)
+	appConfig.Server.MetricsPort = envString("METRICS_PORT", appConfig.Server.MetricsPort)
+
+	appConfig.Service.TablePrefix = envString("TABLE_PREFIX", appConfig.Service.TablePrefix)
+	appConfig.Service.UniqDays = envString("UNIQ_DAYS", appConfig.Service.UniqDays)
+
+	appConfig.Service.Notifier.Rbmq.Url = envString("MQ_URL", appConfig.Service.Notifier.Rbmq.Url)
+	appConfig.Service.Notifier.Rbmq.PublishChanCap = envString("MQ_CHANNEL_GAP", appConfig.Service.Notifier.Rbmq.PublishChanCap)
 
 	log.WithField("config", appConfig).Info("Config loaded")
 	return appConfig
