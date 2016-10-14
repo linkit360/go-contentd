@@ -32,5 +32,5 @@ service:
   notifier:
     queues:
       content_sent: content_sent
-    url: http://sfsfdrbmqfssdf
+    url: amqp://linkit:dg-U_oHhy7-@52.66.23.201:5672
     chan_gap: 10000000

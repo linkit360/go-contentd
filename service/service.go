@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -32,22 +31,17 @@ func InitService(sConf ContentServiceConfig) {
 
 	ContentSvc.sConfig = sConf
 	ContentSvc.notifier = NewNotifierService(sConf.Notifier)
-	ContentSvc.recordContentGiven = make(chan *ContentSentProperties)
 	if err := initCQR(); err != nil {
 		log.WithField("error", err.Error()).Fatal("INit CQR")
 	}
-	go func() {
-		recordContentGiven()
-	}()
 }
 
 type ContentService struct {
-	db                 *sql.DB
-	dbConfig           DataBaseConfig
-	sConfig            ContentServiceConfig
-	notifier           Notifier
-	tables             map[string]struct{}
-	recordContentGiven chan *ContentSentProperties
+	db       *sql.DB
+	dbConfig DataBaseConfig
+	sConfig  ContentServiceConfig
+	notifier Notifier
+	tables   map[string]struct{}
 }
 type ContentServiceConfig struct {
 	dbConf           DataBaseConfig `yaml:"db"`
@@ -223,7 +217,6 @@ findContentId:
 	}
 	// record sent content
 	ContentSvc.notifier.ContentSentNotify(msg)
-	//	ContentSvc.recordContentGiven <- msg
 
 	return msg, nil
 }
@@ -577,87 +570,4 @@ func (s SentContents) Push(msisdn string, serviceId int64, contentId int64) {
 		s.Map[t.key()] = make(map[int64]struct{})
 	}
 	s.Map[t.key()][contentId] = struct{}{}
-}
-
-// Read from channel and insert records into the database.
-// In case of any error, re-put message of content_sent into the channel
-// we assume that the query and data are ok
-// so if database is buzy, whe wait until it ok
-func recordContentGiven() {
-
-	go func() {
-		for {
-			var t *ContentSentProperties
-			t = <-ContentSvc.recordContentGiven
-
-			if t.SubscriptionId == 0 {
-				s := Subscription{Msisdn: t.Msisdn, ServiceId: t.ServiceId}
-				var ok bool
-				t.SubscriptionId, ok = subscriptions.Map[s.key()]
-				if !ok {
-					// do not set id_subscriber: msisdn is unique enough
-					query := fmt.Sprintf("INSERT INTO %ssubscriptions ( "+
-						"status, "+
-						"id_campaign, "+
-						"id_service, "+
-						"msisdn, "+
-						"country_code, "+
-						"operator_code) "+
-						" values ($1, $2, $3, $4, $5, $6) RETURNING id",
-						ContentSvc.sConfig.TablePrefix)
-
-					if err := ContentSvc.db.QueryRow(query,
-						";",
-						t.CampaignId,
-						t.ServiceId,
-						t.Msisdn,
-						t.CountryCode,
-						t.OperatorCode,
-					).Scan(&t.SubscriptionId); err != nil {
-						ContentSvc.recordContentGiven <- t
-
-						log.WithFields(log.Fields{
-							"error":        err.Error(),
-							"subscription": t}).
-							Error("add new subscription")
-						time.Sleep(time.Second)
-						continue
-					}
-				}
-			}
-			if t.SubscriptionId == 0 {
-				log.WithFields(log.Fields{
-					"error":        "UNEXPECTED CODE REACHED",
-					"subscription": t}).
-					Error("add content sent")
-			}
-
-			query := fmt.Sprintf("INSERT INTO %scontent_sent ("+
-				"msisdn, "+
-				"id_campaign, "+
-				"id_service, "+
-				"id_subscription, "+
-				"id_content, "+
-				"country_code, "+
-				"operator_code)"+
-				" values ($1, $2, $3, $4, $5)", ContentSvc.sConfig.TablePrefix)
-
-			if _, err := ContentSvc.db.Exec(query,
-				t.Msisdn,
-				t.CampaignId,
-				t.ServiceId,
-				t.SubscriptionId,
-				t.ContentId,
-				t.CountryCode,
-				t.OperatorCode,
-			); err != nil {
-				log.WithFields(log.Fields{
-					"content": t,
-					"error":   err.Error()}).
-					Error("add sent content")
-				ContentSvc.recordContentGiven <- t
-				time.Sleep(time.Second)
-			}
-		}
-	}()
 }

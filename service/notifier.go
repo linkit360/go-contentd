@@ -33,10 +33,10 @@ type EventNotify struct {
 func NewNotifierService(conf NotifierConfig) Notifier {
 	var n Notifier
 	{
-		rabbit := rabbit.New(rabbit.RBMQConfig{
-			Url:            conf.Rbmq.Url,
-			PublishChanCap: conf.Rbmq.PublishChanCap,
-			Metrics:        rabbit.InitMetrics(),
+		rabbit := rabbit.NewPublisher(rabbit.RBMQConfig{
+			Url:     conf.Rbmq.Url,
+			ChanCap: conf.Rbmq.ChanCap,
+			Metrics: rabbit.InitMetrics(),
 		})
 
 		n = &notifier{
