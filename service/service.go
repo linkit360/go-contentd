@@ -208,6 +208,10 @@ findContentId:
 		}
 	}
 
+	// XXX: dispatcher needs path only,
+	// and, as we got this variables during "get path" process
+	// we save them into database, not to get them again
+	// anyway, it is possible to find a better way in future
 	msg = &ContentSentProperties{
 		Msisdn:       p.Msisdn,
 		ContentPath:  path,
