@@ -29,7 +29,9 @@ type ContentInterface interface {
 
 func InitService(sConf ContentServiceConfig) {
 	initDatabase(sConf.dbConf)
+
 	ContentSvc.sConfig = sConf
+	ContentSvc.notifier = NewNotifierService(sConf.Notifier)
 	ContentSvc.recordContentGiven = make(chan *ContentSentProperties)
 	if err := initCQR(); err != nil {
 		log.WithField("error", err.Error()).Fatal("INit CQR")
@@ -43,11 +45,13 @@ type ContentService struct {
 	db                 *sql.DB
 	dbConfig           DataBaseConfig
 	sConfig            ContentServiceConfig
+	notifier           Notifier
 	tables             map[string]struct{}
 	recordContentGiven chan *ContentSentProperties
 }
 type ContentServiceConfig struct {
 	dbConf           DataBaseConfig `yaml:"db"`
+	Notifier         NotifierConfig `notifier:"notifier"`
 	SearchRetryCount int            `default:"10" yaml:"retry_count"`
 	TablePrefix      string         `default:"xmp_" yaml:"table_prefix"`
 	UniqDays         int            `default:"10" yaml:"uniq_days"` // content would be uniq in these days
@@ -214,7 +218,8 @@ findContentId:
 		OperatorCode: p.OperatorCode,
 	}
 	// record sent content
-	ContentSvc.recordContentGiven <- msg
+	ContentSvc.notifier.ContentSentNotify(msg)
+	//	ContentSvc.recordContentGiven <- msg
 
 	return msg, nil
 }
