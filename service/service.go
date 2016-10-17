@@ -121,6 +121,7 @@ func CQR(table string) (bool, error) {
 type GetUrlByCampaignHashParams struct {
 	Msisdn       string
 	CampaignHash string
+	Tid          string
 	CountryCode  int64
 	OperatorCode int64
 }
@@ -135,8 +136,8 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentPropert
 		"campaignHash": p.CampaignHash,
 		"CountryCode":  p.CountryCode,
 		"OperatorCode": p.OperatorCode,
+		"Tid":          p.Tid,
 	})
-
 	if p.Msisdn == "" || p.CampaignHash == "" || p.CountryCode == 0 || p.OperatorCode == 0 {
 		err = errors.New("Empty required params")
 		logCtx.WithField("error", err.Error()).Errorf("No required params")
@@ -159,6 +160,66 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentPropert
 		logCtx.WithField("error", err.Error()).Errorf("No content avialabale at all")
 		return msg, err
 	}
+
+	// todo:
+	// Platform compatibility check
+	// Subcategory Check
+	//
+	//switch {
+	//case strings.Contains(os, "Windows"):
+	//	platform_id = 3
+	//	break
+	//case strings.Contains(os, "Android"):
+	//	platform_id = 1
+	//	break
+	//case strings.Contains(os, "iOS"):
+	//	platform_id = 2
+	//	break
+	//case strings.Contains(os, "BlackBerry"):
+	//	platform_id = 4
+	//	break
+	//case strings.Contains(os, "Symbian"):
+	//	platform_id = 14
+	//	break
+	//default:
+	//	platform_id = 0
+	//}
+	//
+	//if platform_id != content.PlatformId && content.PlatformId != 0 {
+	//	//----------------------- Search All Active Content by Platform -------------------------
+	//	content_records, err := database.SearchAllPlatformContent(platform_id, 1)
+	//	if err != nil {
+	//		return nil, errors.NotFound("go.micro.srv.content.Deliver.SearchPlatformContent", err.Error())
+	//	}
+	//
+	//	if len(content_records) == 0 {
+	//		return nil, errors.NotFound("go.micro.srv.content.Deliver.SearchPlatformContent", "no compatibile platform")
+	//	}
+	//
+	//	//----------------------- Search in SubCategory -------------------------
+	//	for _, content_record := range content_records {
+	//		if content.SubCategoryId == content_record.SubCategoryId {
+	//			return content_record, nil
+	//		}
+	//	}
+	//
+	//	//----------------------- Search in Category -------------------------
+	//	for _, content_record := range content_records {
+	//		if content.CategoryId == content_record.CategoryId {
+	//			return content_record, nil
+	//		}
+	//	}
+	//
+	//	//----------------------- Search in Publishers -------------------------
+	//	for _, content_record := range content_records {
+	//		if content.PublisherId == content_record.PublisherId {
+	//			return content_record, nil
+	//		}
+	//	}
+	//
+	//	//----------------------- Random content -------------------------
+	//	content = content_records[rand.Intn(len(content_records)-1)]
+	//}
 
 	retry := 0
 findContentId:
@@ -208,6 +269,7 @@ findContentId:
 	// anyway, it is possible to find a better way in future
 	msg = &ContentSentProperties{
 		Msisdn:       p.Msisdn,
+		Tid:          p.Tid,
 		ContentPath:  path,
 		CampaignId:   campaign.Id,
 		ContentId:    contentId,
@@ -479,6 +541,7 @@ type SentContents struct {
 // and alos need for recording "got content"
 type ContentSentProperties struct {
 	Msisdn         string `json:"msisdn"`
+	Tid            string `json:"tid"`
 	ContentPath    string `json:"content_path"`
 	CapmaignHash   string `json:"capmaign_hash"`
 	CampaignId     int64  `json:"campaign_id"`

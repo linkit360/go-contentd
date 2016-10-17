@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	content_server "github.com/vostrok/contentd/server/src"
