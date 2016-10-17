@@ -27,12 +27,12 @@ type ContentInterface interface {
 }
 
 func InitService(sConf ContentServiceConfig) {
-	initDatabase(sConf.dbConf)
+	initDatabase(sConf.DbConf)
 
 	ContentSvc.sConfig = sConf
 	ContentSvc.notifier = NewNotifierService(sConf.Notifier)
 	if err := initCQR(); err != nil {
-		log.WithField("error", err.Error()).Fatal("INit CQR")
+		log.WithField("error", err.Error()).Fatal("Init CQR")
 	}
 }
 
@@ -44,7 +44,7 @@ type ContentService struct {
 	tables   map[string]struct{}
 }
 type ContentServiceConfig struct {
-	dbConf           DataBaseConfig `yaml:"db"`
+	DbConf           DataBaseConfig `yaml:"db"`
 	Notifier         NotifierConfig `notifier:"notifier"`
 	SearchRetryCount int            `default:"10" yaml:"retry_count"`
 	TablePrefix      string         `default:"xmp_" yaml:"table_prefix"`
@@ -326,16 +326,13 @@ func (s Services) Reload() error {
 	if rows.Err() != nil {
 		return fmt.Errorf("RowsError: %s", err.Error())
 	}
-
-	placeHoldersForServiceIds := []string{}
-	startIdx := 2
-	for range serviceIds {
-		placeHoldersForServiceIds = append(placeHoldersForServiceIds, "$"+strconv.Itoa(startIdx))
-		startIdx++
+	serviceIdsStr := []string{}
+	for _, v := range serviceIds {
+		serviceIdsStr = append(serviceIdsStr, strconv.FormatInt(v, 10))
 	}
-	query = fmt.Sprintf("select id_service, id_content from %sservice_content where status = $1 and id_service IN (%s)",
-		ContentSvc.sConfig.TablePrefix, strings.Join(placeHoldersForServiceIds, ", "))
-	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS, serviceIds)
+	query = fmt.Sprintf("select id_service, id_content from %sservice_content where status = $1"+
+		" and id_service = any($2::integer[])", ContentSvc.sConfig.TablePrefix)
+	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS, "{"+strings.Join(serviceIdsStr, ", ")+"}")
 	if err != nil {
 		return fmt.Errorf("service_content QueryServices: %s, query: %s", err.Error(), query)
 	}
@@ -386,7 +383,7 @@ type Contents struct {
 }
 
 func (s Contents) Reload() error {
-	query := fmt.Sprintf("select id from %scontent where status = $1", ContentSvc.sConfig.TablePrefix)
+	query := fmt.Sprintf("select id, object from %scontent where status = $1", ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
 		return fmt.Errorf("content QueryServices: %s, query: %s", err.Error(), query)
@@ -397,7 +394,7 @@ func (s Contents) Reload() error {
 	for rows.Next() {
 		var c Content
 		if err := rows.Scan(&c.Id, &c.Object); err != nil {
-			return err
+			return fmt.Errorf("rows.Scan: %s", err.Error())
 		}
 		contents = append(contents, c)
 	}
@@ -490,7 +487,7 @@ func (s Subscription) key() string {
 	return fmt.Sprintf("%s-%d", s.Msisdn, s.ServiceId)
 }
 func (s Subscriptions) Reload() error {
-	query := fmt.Sprintf("select msisdn, id_service, id_subscription from "+
+	query := fmt.Sprintf("select id, msisdn, id_service from "+
 		"%ssubscriptions where status = $1", ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
@@ -503,9 +500,9 @@ func (s Subscriptions) Reload() error {
 		record := Subscription{}
 
 		if err := rows.Scan(
+			&record.SubscriptionId,
 			&record.Msisdn,
 			&record.ServiceId,
-			&record.SubscriptionId,
 		); err != nil {
 			return err
 		}
@@ -564,10 +561,11 @@ func (t ContentSentProperties) key() string {
 func (s SentContents) Reload() error {
 	query := fmt.Sprintf("select msisdn, id_service, id_content "+
 		"from %scontent_sent "+
-		"where created_at > (CURRENT_TIMESTAMP - INTERVAL '$3 days')",
-		ContentSvc.sConfig.TablePrefix,
-	)
-	rows, err := ContentSvc.db.Query(query, ContentSvc.sConfig.UniqDays)
+		"where sent_at > (CURRENT_TIMESTAMP - INTERVAL '"+
+		strconv.Itoa(ContentSvc.sConfig.UniqDays)+" days')",
+		ContentSvc.sConfig.TablePrefix)
+
+	rows, err := ContentSvc.db.Query(query)
 
 	if err != nil {
 		return fmt.Errorf("SentContent Reload QueryServices: %s, query: %s", err.Error(), query)

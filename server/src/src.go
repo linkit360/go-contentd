@@ -31,10 +31,13 @@ func Run() {
 	runtime.GOMAXPROCS(nuCPU)
 	log.WithField("CPUCount", nuCPU)
 
-	l, err := net.Listen("tcp", appConfig.Server.Port)
+	l, err := net.Listen("tcp", ":"+appConfig.Server.Port)
 	if err != nil {
 		log.Fatal("netListen ", err.Error())
+	} else {
+		log.WithField("port", appConfig.Server.Port).Info("rpc port")
 	}
+
 	server := rpc.NewServer()
 	server.RegisterName("SVC", &handlers.RPCContentService{})
 
@@ -50,4 +53,5 @@ func Run() {
 	rg := r.Group("/debug")
 	rg.GET("/vars", expvar.Handler())
 	r.Run(":" + appConfig.Server.MetricsPort)
+	log.WithField("port", appConfig.Server.MetricsPort).Info("metrics port")
 }

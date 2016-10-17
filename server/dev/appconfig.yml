@@ -1,6 +1,6 @@
 server:
-  port: 70301
-  metrics_port: 70302
+  port: 50301
+  metrics_port: 50302
 
 newrelic:
   appname: conetntd.linkit360.com
@@ -27,6 +27,7 @@ service:
     pass: E0kZN8pUAs63wePepf
     port: 5432
     host: linkit.cz3twmoynbq5.eu-central-1.rds.amazonaws.com
+    ssl_mode: disable
     table_prefix: xmp_
 
   notifier:

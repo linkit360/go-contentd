@@ -7,6 +7,7 @@ package service
 import (
 	"database/sql"
 	"fmt"
+	_ "github.com/lib/pq"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -21,7 +22,7 @@ type DataBaseConfig struct {
 	Port             string `default:""`
 	Name             string `default:""`
 	Host             string `default:""`
-	SSLMode          string `default:"disabled"`
+	SSLMode          string `default:"disable" yaml:"ssl_mode"`
 	TablePrefix      string `default:""`
 }
 

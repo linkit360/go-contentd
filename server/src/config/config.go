@@ -12,8 +12,8 @@ import (
 )
 
 type ServerConfig struct {
-	Port        string `default:"70401"`
-	MetricsPort string `default:"70402" yaml:"metrics_port"`
+	Port        string `default:"50301"`
+	MetricsPort string `default:"50302" yaml:"metrics_port"`
 }
 type NewRelicConfig struct {
 	AppName string `default:"contentd.linkit360.com"`
