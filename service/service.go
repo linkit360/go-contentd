@@ -14,6 +14,8 @@ import (
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
+
+	"github.com/vostrok/db"
 )
 
 const ACTIVE_STATUS = 1
@@ -27,7 +29,7 @@ type ContentInterface interface {
 }
 
 func InitService(sConf ContentServiceConfig) {
-	initDatabase(sConf.DbConf)
+	ContentSvc.db = db.Init(sConf.DbConf)
 
 	ContentSvc.sConfig = sConf
 	ContentSvc.notifier = NewNotifierService(sConf.Notifier)
@@ -38,18 +40,17 @@ func InitService(sConf ContentServiceConfig) {
 
 type ContentService struct {
 	db       *sql.DB
-	dbConfig DataBaseConfig
 	sConfig  ContentServiceConfig
 	notifier Notifier
 	tables   map[string]struct{}
 }
 type ContentServiceConfig struct {
-	DbConf           DataBaseConfig `yaml:"db"`
-	Notifier         NotifierConfig `notifier:"notifier"`
-	SearchRetryCount int            `default:"10" yaml:"retry_count"`
-	TablePrefix      string         `default:"xmp_" yaml:"table_prefix"`
-	UniqDays         int            `default:"10" yaml:"uniq_days"` // content would be uniq in these days
-	Tables           []string       `default:"campaign,service,content,service_content,subscriptions,content_sent" yaml:"tables"`
+	DbConf           db.DataBaseConfig `yaml:"db"`
+	Notifier         NotifierConfig    `notifier:"notifier"`
+	SearchRetryCount int               `default:"10" yaml:"retry_count"`
+	TablePrefix      string            `default:"xmp_" yaml:"table_prefix"`
+	UniqDays         int               `default:"10" yaml:"uniq_days"` // content would be uniq in these days
+	Tables           []string          `default:"campaign,service,content,service_content,subscriptions,content_sent" yaml:"tables"`
 }
 
 func initCQR() error {

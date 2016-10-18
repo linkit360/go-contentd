@@ -1,11 +1,10 @@
 .PHONY: dev run release send
 
 dev:
-	go build -v -o bin/contentd \
-	./bin/contentd
+	rm ./server ; go build ;./server 
 
 run:
-	./bin/contentd
+	./server
 
 release:
 	export GOOS=linux; export GOARCH=amd64; \
@@ -13,3 +12,4 @@ release:
 
 send:
 	scp -i ~/.ssh/mobilink_centos.pem bin/contentd-linux-amd64 centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/bin/contentd-linux-amd64
+	scp -i ~/.ssh/mobilink_centos.pem dev/appconfig.yml centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/bin/contentd-linux-amd64
