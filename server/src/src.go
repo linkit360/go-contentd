@@ -31,6 +31,22 @@ func Run() {
 	runtime.GOMAXPROCS(nuCPU)
 	log.WithField("CPUCount", nuCPU)
 
+	go runGin(appConfig)
+	runRPC(appConfig)
+}
+
+func runGin(appConfig config.AppConfig) {
+	r := gin.New()
+	service.AddCQRHandler(r)
+
+	rg := r.Group("/debug")
+	rg.GET("/vars", expvar.Handler())
+
+	r.Run(":" + appConfig.Server.MetricsPort)
+	log.WithField("port", appConfig.Server.MetricsPort).Info("service port")
+}
+
+func runRPC(appConfig config.AppConfig) {
 	l, err := net.Listen("tcp", ":"+appConfig.Server.Port)
 	if err != nil {
 		log.Fatal("netListen ", err.Error())
@@ -48,10 +64,4 @@ func Run() {
 			log.WithField("error", err.Error()).Error("Accept")
 		}
 	}
-
-	r := gin.New()
-	rg := r.Group("/debug")
-	rg.GET("/vars", expvar.Handler())
-	r.Run(":" + appConfig.Server.MetricsPort)
-	log.WithField("port", appConfig.Server.MetricsPort).Info("metrics port")
 }

@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/vostrok/contentd/server/src/metrics"
 	"github.com/vostrok/contentd/service"
-	"time"
 )
 
 type RPCContentService struct{}
