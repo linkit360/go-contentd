@@ -1,6 +1,6 @@
 server:
-  port: 50301
-  metrics_port: 50302
+  rpc_port: 50301
+  http_port: 50302
 
 newrelic:
   appname: dev.conetntd.linkit360.com

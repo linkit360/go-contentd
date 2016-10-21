@@ -12,8 +12,8 @@ import (
 )
 
 type ServerConfig struct {
-	Port        string `default:"50301"`
-	MetricsPort string `default:"50302" yaml:"metrics_port"`
+	RPCPort  string `default:"50301" yaml:"rpc_port"`
+	HttpPort string `default:"50302" yaml:"http_port"`
 }
 type NewRelicConfig struct {
 	AppName string `default:"contentd.linkit360.com"`
@@ -37,8 +37,8 @@ func LoadConfig() AppConfig {
 		}
 	}
 
-	appConfig.Server.Port = envString("PORT", appConfig.Server.Port)
-	appConfig.Server.MetricsPort = envString("METRICS_PORT", appConfig.Server.MetricsPort)
+	appConfig.Server.RPCPort = envString("PORT", appConfig.Server.RPCPort)
+	appConfig.Server.HttpPort = envString("METRICS_PORT", appConfig.Server.HttpPort)
 
 	appConfig.Service.TablePrefix = envString("TABLE_PREFIX", appConfig.Service.TablePrefix)
 	appConfig.Service.UniqDays = envInt("UNIQ_DAYS", appConfig.Service.UniqDays)

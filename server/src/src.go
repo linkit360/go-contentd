@@ -37,21 +37,22 @@ func Run() {
 
 func runGin(appConfig config.AppConfig) {
 	r := gin.New()
+
 	service.AddCQRHandler(r)
 
 	rg := r.Group("/debug")
 	rg.GET("/vars", expvar.Handler())
 
-	r.Run(":" + appConfig.Server.MetricsPort)
-	log.WithField("port", appConfig.Server.MetricsPort).Info("service port")
+	r.Run(":" + appConfig.Server.HttpPort)
+	log.WithField("port", appConfig.Server.HttpPort).Info("service port")
 }
 
 func runRPC(appConfig config.AppConfig) {
-	l, err := net.Listen("tcp", ":"+appConfig.Server.Port)
+	l, err := net.Listen("tcp", ":"+appConfig.Server.RPCPort)
 	if err != nil {
 		log.Fatal("netListen ", err.Error())
 	} else {
-		log.WithField("port", appConfig.Server.Port).Info("rpc port")
+		log.WithField("port", appConfig.Server.RPCPort).Info("rpc port")
 	}
 
 	server := rpc.NewServer()

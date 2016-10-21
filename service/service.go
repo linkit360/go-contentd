@@ -26,6 +26,8 @@ type ContentInterface interface {
 }
 
 func InitService(sConf ContentServiceConfig) {
+	log.SetLevel(log.DebugLevel)
+
 	ContentSvc.db = db.Init(sConf.DbConf)
 
 	ContentSvc.sConfig = sConf
@@ -96,62 +98,6 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentPropert
 	// todo:
 	// Platform compatibility check
 	// Subcategory Check
-	//
-	//switch {
-	//case strings.Contains(os, "Windows"):
-	//	platform_id = 3
-	//	break
-	//case strings.Contains(os, "Android"):
-	//	platform_id = 1
-	//	break
-	//case strings.Contains(os, "iOS"):
-	//	platform_id = 2
-	//	break
-	//case strings.Contains(os, "BlackBerry"):
-	//	platform_id = 4
-	//	break
-	//case strings.Contains(os, "Symbian"):
-	//	platform_id = 14
-	//	break
-	//default:
-	//	platform_id = 0
-	//}
-	//
-	//if platform_id != content.PlatformId && content.PlatformId != 0 {
-	//	//----------------------- Search All Active Content by Platform -------------------------
-	//	content_records, err := database.SearchAllPlatformContent(platform_id, 1)
-	//	if err != nil {
-	//		return nil, errors.NotFound("go.micro.srv.content.Deliver.SearchPlatformContent", err.Error())
-	//	}
-	//
-	//	if len(content_records) == 0 {
-	//		return nil, errors.NotFound("go.micro.srv.content.Deliver.SearchPlatformContent", "no compatibile platform")
-	//	}
-	//
-	//	//----------------------- Search in SubCategory -------------------------
-	//	for _, content_record := range content_records {
-	//		if content.SubCategoryId == content_record.SubCategoryId {
-	//			return content_record, nil
-	//		}
-	//	}
-	//
-	//	//----------------------- Search in Category -------------------------
-	//	for _, content_record := range content_records {
-	//		if content.CategoryId == content_record.CategoryId {
-	//			return content_record, nil
-	//		}
-	//	}
-	//
-	//	//----------------------- Search in Publishers -------------------------
-	//	for _, content_record := range content_records {
-	//		if content.PublisherId == content_record.PublisherId {
-	//			return content_record, nil
-	//		}
-	//	}
-	//
-	//	//----------------------- Random content -------------------------
-	//	content = content_records[rand.Intn(len(content_records)-1)]
-	//}
 
 	retry := 0
 findContentId:
