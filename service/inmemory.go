@@ -160,7 +160,7 @@ type ServiceContent struct {
 	IdContent int64
 }
 
-func (s Services) Reload() error {
+func (s *Services) Reload() error {
 	query := fmt.Sprintf("select id, price from %sservices where status = $1", ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
@@ -232,7 +232,7 @@ func (s Services) Reload() error {
 	return nil
 }
 
-func (s Services) Get(serviceId int64) (contentIds []int64) {
+func (s *Services) Get(serviceId int64) (contentIds []int64) {
 	if svc, ok := s.Map[serviceId]; ok {
 		return svc.ContentIds
 	}
@@ -250,7 +250,7 @@ type Contents struct {
 	Map map[int64]string
 }
 
-func (s Contents) Reload() error {
+func (s *Contents) Reload() error {
 	query := fmt.Sprintf("select id, object from %scontent where status = $1", ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
@@ -296,7 +296,7 @@ type Campaign struct {
 	ServiceId int64
 }
 
-func (s Campaigns) Reload() error {
+func (s *Campaigns) Reload() error {
 	query := fmt.Sprintf("select id, hash, service_id_1 from %scampaigns where status = $1",
 		ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
@@ -354,7 +354,7 @@ type Subscription struct {
 func (s Subscription) key() string {
 	return fmt.Sprintf("%s-%d", s.Msisdn, s.ServiceId)
 }
-func (s Subscriptions) Reload() error {
+func (s *Subscriptions) Reload() error {
 	query := fmt.Sprintf("select id, msisdn, id_service from "+
 		"%ssubscriptions where status = $1", ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
@@ -427,7 +427,7 @@ func (t ContentSentProperties) key() string {
 
 // Load sent contents to filter content that had been seen by the msisdn.
 // created at == before date specified in config
-func (s SentContents) Reload() error {
+func (s *SentContents) Reload() error {
 	query := fmt.Sprintf("select msisdn, id_service, id_content "+
 		"from %scontent_sent "+
 		"where sent_at > (CURRENT_TIMESTAMP - INTERVAL '"+
@@ -475,7 +475,7 @@ func (s SentContents) Reload() error {
 // Attention: filtered by service id also,
 // so if we would have had content id on one service and the same content id on another service as a content id
 // then it had used as different contens! And will shown
-func (s SentContents) Get(msisdn string, serviceId int64) (contentIds map[int64]struct{}) {
+func (s *SentContents) Get(msisdn string, serviceId int64) (contentIds map[int64]struct{}) {
 	var ok bool
 	t := ContentSentProperties{Msisdn: msisdn, ServiceId: serviceId}
 	if contentIds, ok = s.Map[t.key()]; ok {
@@ -486,7 +486,7 @@ func (s SentContents) Get(msisdn string, serviceId int64) (contentIds map[int64]
 
 // When there is no content avialabe for the msisdn, reset the content counter
 // Breakes after reloading sent content table (on the restart of the application)
-func (s SentContents) Clear(msisdn string, serviceId int64) {
+func (s *SentContents) Clear(msisdn string, serviceId int64) {
 	t := ContentSentProperties{Msisdn: msisdn, ServiceId: serviceId}
 	delete(s.Map, t.key())
 }
@@ -494,7 +494,7 @@ func (s SentContents) Clear(msisdn string, serviceId int64) {
 // After we have chosen the content to show,
 // we notice it in sent content table (another place)
 // and also we need to update in-memory cache of used content id for this msisdn and service id
-func (s SentContents) Push(msisdn string, serviceId int64, contentId int64) {
+func (s *SentContents) Push(msisdn string, serviceId int64, contentId int64) {
 	t := ContentSentProperties{Msisdn: msisdn, ServiceId: serviceId}
 	if _, ok := s.Map[t.key()]; !ok {
 		s.Map[t.key()] = make(map[int64]struct{})
