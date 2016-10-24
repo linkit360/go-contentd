@@ -72,7 +72,7 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentPropert
 		"OperatorCode": p.OperatorCode,
 		"Tid":          p.Tid,
 	})
-	if p.Msisdn == "" || p.CampaignHash == "" || p.CountryCode == 0 || p.OperatorCode == 0 {
+	if p.Msisdn == "" || p.CampaignHash == "" || p.CountryCode == 0 || p.OperatorCode == 0 || p.Tid == "" {
 		err = errors.New("Empty required params")
 		logCtx.WithField("error", err.Error()).Errorf("No required params")
 	}
@@ -95,9 +95,8 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentPropert
 		return msg, err
 	}
 
-	// todo:
-	// Platform compatibility check
-	// Subcategory Check
+	// todo: platform compatibility check
+	// todo: subcategory check
 
 	retry := 0
 findContentId:
@@ -147,6 +146,7 @@ findContentId:
 	// anyway, it is possible to find a better way in future
 	msg = &ContentSentProperties{
 		Msisdn:       p.Msisdn,
+		Price:        int(service.Map[serviceId].Price),
 		Tid:          p.Tid,
 		ContentPath:  path,
 		CampaignId:   campaign.Id,

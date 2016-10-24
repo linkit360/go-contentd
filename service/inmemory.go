@@ -144,10 +144,12 @@ var service = &Services{}
 
 type Services struct {
 	sync.RWMutex
-	Map map[int64][]int64
+	Map map[int64]Service
 }
 type Service struct {
-	Id int64
+	Id         int64
+	Price      float64
+	ContentIds []int64
 }
 type Content struct {
 	Id     int64
@@ -159,29 +161,35 @@ type ServiceContent struct {
 }
 
 func (s Services) Reload() error {
-	query := fmt.Sprintf("select id from %sservices where status = $1", ContentSvc.sConfig.TablePrefix)
+	query := fmt.Sprintf("select id, price from %sservices where status = $1", ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
 		return fmt.Errorf("services QueryServices: %s, query: %s", err.Error(), query)
 	}
 	defer rows.Close()
 
-	var serviceIds []int64
+	var svcs []Service
 	for rows.Next() {
-		var serviceId int64
+		var srv Service
 		if err := rows.Scan(
-			&serviceId,
+			&srv.Id,
+			&srv.Price,
 		); err != nil {
 			return err
 		}
-		serviceIds = append(serviceIds, serviceId)
+		svcs = append(svcs, srv)
 	}
 	if rows.Err() != nil {
 		return fmt.Errorf("RowsError: %s", err.Error())
 	}
+	priceMap := make(map[int64]float64)
+	for _, v := range svcs {
+		priceMap[v.Id] = v.Price
+	}
+
 	serviceIdsStr := []string{}
-	for _, v := range serviceIds {
-		serviceIdsStr = append(serviceIdsStr, strconv.FormatInt(v, 10))
+	for _, v := range svcs {
+		serviceIdsStr = append(serviceIdsStr, strconv.FormatInt(v.Id, 10))
 	}
 	query = fmt.Sprintf("select id_service, id_content from %sservice_content where status = $1"+
 		" and id_service = any($2::integer[])", ContentSvc.sConfig.TablePrefix)
@@ -191,7 +199,7 @@ func (s Services) Reload() error {
 	}
 	defer rows.Close()
 
-	var serviceMap []ServiceContent
+	var serviceContentAr []ServiceContent
 	for rows.Next() {
 		var serviceContent ServiceContent
 		if err := rows.Scan(
@@ -200,7 +208,7 @@ func (s Services) Reload() error {
 		); err != nil {
 			return err
 		}
-		serviceMap = append(serviceMap, serviceContent)
+		serviceContentAr = append(serviceContentAr, serviceContent)
 	}
 	if rows.Err() != nil {
 		return fmt.Errorf("service_content RowsError: %s", err.Error())
@@ -209,19 +217,26 @@ func (s Services) Reload() error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.Map = make(map[int64][]int64)
-	for _, service := range serviceMap {
-		if _, ok := s.Map[service.IdService]; !ok {
-			s.Map[service.IdService] = []int64{}
+	s.Map = make(map[int64]Service)
+	for _, serviceContent := range serviceContentAr {
+		srv, ok := s.Map[serviceContent.IdService]
+		if !ok {
+			s.Map[serviceContent.IdService] = Service{}
 		}
-		s.Map[service.IdService] = append(s.Map[service.IdService], service.IdContent)
+		srv.ContentIds = append(srv.ContentIds, serviceContent.IdContent)
+		srv.Id = serviceContent.IdService
+		srv.Price = priceMap[serviceContent.IdService]
+		s.Map[serviceContent.IdService] = srv
+
 	}
 	return nil
 }
 
 func (s Services) Get(serviceId int64) (contentIds []int64) {
-	contentIds, _ = s.Map[serviceId]
-	return
+	if svc, ok := s.Map[serviceId]; ok {
+		return svc.ContentIds
+	}
+	return []int64{}
 }
 
 // Tasks:
@@ -392,6 +407,7 @@ type SentContents struct {
 type ContentSentProperties struct {
 	Msisdn         string `json:"msisdn"`
 	Tid            string `json:"tid"`
+	Price          int    `json:"price"`
 	ContentPath    string `json:"content_path"`
 	CapmaignHash   string `json:"capmaign_hash"`
 	CampaignId     int64  `json:"campaign_id"`
