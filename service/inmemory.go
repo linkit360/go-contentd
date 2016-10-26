@@ -152,8 +152,9 @@ type Service struct {
 	ContentIds []int64
 }
 type Content struct {
-	Id     int64
-	Object string
+	Id   int64
+	Path string
+	Name string
 }
 type ServiceContent struct {
 	IdService int64
@@ -247,11 +248,16 @@ var content = &Contents{}
 
 type Contents struct {
 	sync.RWMutex
-	Map map[int64]string
+	Map map[int64]Content
 }
 
 func (s *Contents) Reload() error {
-	query := fmt.Sprintf("select id, object from %scontent where status = $1", ContentSvc.sConfig.TablePrefix)
+	query := fmt.Sprintf("select "+
+		"id, "+
+		"object, "+
+		"content_name "+
+		"from %scontent where status = $1",
+		ContentSvc.sConfig.TablePrefix)
 	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
 		return fmt.Errorf("content QueryServices: %s, query: %s", err.Error(), query)
@@ -261,7 +267,11 @@ func (s *Contents) Reload() error {
 	var contents []Content
 	for rows.Next() {
 		var c Content
-		if err := rows.Scan(&c.Id, &c.Object); err != nil {
+		if err := rows.Scan(
+			&c.Id,
+			&c.Path,
+			&c.Name,
+		); err != nil {
 			return fmt.Errorf("rows.Scan: %s", err.Error())
 		}
 		contents = append(contents, c)
@@ -273,9 +283,9 @@ func (s *Contents) Reload() error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.Map = make(map[int64]string)
+	s.Map = make(map[int64]Content)
 	for _, content := range contents {
-		s.Map[content.Id] = content.Object
+		s.Map[content.Id] = content
 	}
 	return nil
 }
@@ -409,6 +419,7 @@ type ContentSentProperties struct {
 	Tid            string `json:"tid"`
 	Price          int    `json:"price"`
 	ContentPath    string `json:"content_path"`
+	ContentName    string `json:"content_name"`
 	CapmaignHash   string `json:"capmaign_hash"`
 	CampaignId     int64  `json:"campaign_id"`
 	ContentId      int64  `json:"content_id"`

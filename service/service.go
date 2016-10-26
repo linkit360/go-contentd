@@ -146,14 +146,13 @@ findContentId:
 			contentId = int64(id)
 			break
 		}
-
 	}
 	// update in-memory cache usedContentIds
 	contentSent.Push(p.Msisdn, serviceId, contentId)
 
 	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
-	path, ok := content.Map[contentId]
+	contentInfo, ok := content.Map[contentId]
 	if !ok {
 		if retry < ContentSvc.sConfig.SearchRetryCount {
 			retry++
@@ -181,7 +180,8 @@ findContentId:
 		Msisdn:       p.Msisdn,
 		Price:        int(service.Map[serviceId].Price),
 		Tid:          p.Tid,
-		ContentPath:  path,
+		ContentPath:  contentInfo.Path,
+		ContentName:  contentInfo.Name,
 		CampaignId:   campaign.Id,
 		CapmaignHash: p.CampaignHash,
 		ContentId:    contentId,
