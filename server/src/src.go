@@ -48,6 +48,7 @@ func runGin(appConfig config.AppConfig) {
 }
 
 func runRPC(appConfig config.AppConfig) {
+
 	l, err := net.Listen("tcp", ":"+appConfig.Server.RPCPort)
 	if err != nil {
 		log.Fatal("netListen ", err.Error())
@@ -56,13 +57,15 @@ func runRPC(appConfig config.AppConfig) {
 	}
 
 	server := rpc.NewServer()
+	server.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
+
 	server.RegisterName("SVC", &handlers.RPCContentService{})
 
 	for {
 		if conn, err := l.Accept(); err == nil {
 			go server.ServeCodec(jsonrpc.NewServerCodec(conn))
 		} else {
-			log.WithField("error", err.Error()).Error("Accept")
+			log.WithField("error", err.Error()).Error("accept")
 		}
 	}
 }

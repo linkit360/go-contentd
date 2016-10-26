@@ -32,20 +32,16 @@ func NewClient(dsn string, timeoutSeconds int) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) Get(req service.GetUrlByCampaignHashParams) (msg service.ContentSentProperties, err error) {
-
-	res := service.ContentSentProperties{}
-	if err = c.connection.Call("SVC.GetContentByCampaign", req, &res); err != nil {
-		return msg, err
-	}
+func (c *Client) Get(req service.GetUrlByCampaignHashParams) (res service.ContentSentProperties, err error) {
+	err = c.connection.Call("SVC.GetContentByCampaign", req, &res)
 	return res, err
 }
 
 func (c *Client) CQR(table string) (success bool, err error) {
 
 	req := handlers.CQRRequest{Table: table}
-	res := handlers.CQRResponse{}
-	if err = c.connection.Call("SVC.CQR", req, &res); err != nil {
+	res := &handlers.CQRResponse{}
+	if err = c.connection.Call("SVC.CQR", req, res); err != nil {
 		return false, err
 	}
 	return res.Success, err

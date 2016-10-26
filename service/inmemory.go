@@ -488,8 +488,17 @@ func (s *SentContents) Get(msisdn string, serviceId int64) (contentIds map[int64
 // Breakes after reloading sent content table (on the restart of the application)
 func (s *SentContents) Clear(msisdn string, serviceId int64) {
 	t := ContentSentProperties{Msisdn: msisdn, ServiceId: serviceId}
+	log.WithFields(log.Fields{
+		"key": t.key(),
+	}).Debug("reset cache")
 	delete(s.Map, t.key())
+
+	if _, ok := s.Map[t.key()]; ok {
+		log.Error("reset cache failed")
+	}
 }
+
+//WithFields(log.Fields{})
 
 // After we have chosen the content to show,
 // we notice it in sent content table (another place)

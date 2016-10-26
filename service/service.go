@@ -146,6 +146,7 @@ findContentId:
 	}
 	// update in-memory cache usedContentIds
 	contentSent.Push(p.Msisdn, serviceId, contentId)
+
 	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
 	path, ok := content.Map[contentId]
@@ -184,8 +185,15 @@ findContentId:
 		CountryCode:  p.CountryCode,
 		OperatorCode: p.OperatorCode,
 	}
-	// record sent content
-	ContentSvc.notifier.ContentSentNotify(msg)
 
+	// record sent content
+	if err = ContentSvc.notifier.ContentSentNotify(msg); err != nil {
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Info("notify content sent error")
+	} else {
+		logCtx.Info("notiied")
+	}
+	logCtx.Info("success")
 	return msg, nil
 }

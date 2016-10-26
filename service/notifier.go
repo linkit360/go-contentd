@@ -2,8 +2,8 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/vostrok/rabbit"
 )
 
@@ -58,8 +58,7 @@ func (service notifier) ContentSentNotify(msg *ContentSentProperties) error {
 
 	body, err := json.Marshal(event)
 	if err != nil {
-		log.WithField("ContentSentNotify", err.Error())
-		return err
+		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
 
 	service.mq.Publish(rabbit.AMQPMessage{service.q.contentSent, body})
