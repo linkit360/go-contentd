@@ -97,10 +97,13 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentPropert
 	logCtx.WithFields(log.Fields{
 		"usedContentIds": usedContentIds,
 		"serviceId":      serviceId,
-	}).Debug("got candidates for service id")
+	}).Debug("got used content ids")
 
 	avialableContentIds := service.Get(serviceId)
-	logCtx.WithField("avialableContentIds", avialableContentIds)
+	logCtx.WithFields(log.Fields{
+		"avialableContentIds": avialableContentIds,
+	}).Debug("got avialable content ids")
+
 	if len(avialableContentIds) == 0 {
 		err = fmt.Errorf("No content for campaign %s at all", p.CampaignHash)
 		logCtx.WithField("error", err.Error()).Errorf("No content avialabale at all")
@@ -114,15 +117,23 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentPropert
 findContentId:
 	// find first avialable contentId
 	contentId := int64(0)
-	for id, _ := range avialableContentIds {
+	for _, id := range avialableContentIds {
 		if usedContentIds != nil {
-			if _, ok := usedContentIds[int64(id)]; ok {
+			if usedId, ok := usedContentIds[id]; ok {
+				logCtx.WithFields(log.Fields{
+					"contentId": usedId,
+				}).Debug("contentID already used, next..")
+
 				continue
 			}
 		}
 		contentId = int64(id)
+		logCtx.WithFields(log.Fields{
+			"contentId": id,
+		}).Debug("contentId found")
 		break
 	}
+
 	// reset if nothing
 	if contentId == 0 {
 		logCtx.Debug("No content avialable, reset remembered cache..")
@@ -167,6 +178,7 @@ findContentId:
 		Tid:          p.Tid,
 		ContentPath:  path,
 		CampaignId:   campaign.Id,
+		CapmaignHash: p.CampaignHash,
 		ContentId:    contentId,
 		ServiceId:    serviceId,
 		CountryCode:  p.CountryCode,
