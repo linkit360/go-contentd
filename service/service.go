@@ -49,7 +49,7 @@ type ContentServiceConfig struct {
 	SearchRetryCount int               `default:"10" yaml:"retry_count"`
 	TablePrefix      string            `default:"xmp_" yaml:"table_prefix"`
 	UniqDays         int               `default:"10" yaml:"uniq_days"` // content would be uniq in these days
-	Tables           []string          `default:"campaign,service,content,service_content,subscriptions,content_sent" yaml:"tables"`
+	Tables           []string          `yaml:"tables"`
 }
 
 type GetUrlByCampaignHashParams struct {
@@ -68,24 +68,36 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentPropert
 	logCtx := log.WithFields(log.Fields{
 		"msisdn":       p.Msisdn,
 		"campaignHash": p.CampaignHash,
-		"CountryCode":  p.CountryCode,
-		"OperatorCode": p.OperatorCode,
-		"Tid":          p.Tid,
+		"countryCode":  p.CountryCode,
+		"operatorCode": p.OperatorCode,
+		"tid":          p.Tid,
 	})
-	if p.Msisdn == "" || p.CampaignHash == "" || p.CountryCode == 0 || p.OperatorCode == 0 || p.Tid == "" {
+	if p.Msisdn == "" ||
+		p.CampaignHash == "" ||
+		p.CountryCode == 0 ||
+		p.OperatorCode == 0 ||
+		p.Tid == "" {
 		err = errors.New("Empty required params")
-		logCtx.WithField("error", err.Error()).Errorf("No required params")
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Errorf("required params are empty")
+		return msg, errors.New("Required params not found")
 	}
 	campaign, ok := campaign.Map[p.CampaignHash]
 	if !ok {
 		err = errors.New("Not found")
-		logCtx.WithField("error", err.Error()).Errorf("get campaign by campaign hash")
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Errorf("couldn't get campaign by campaign hash")
 		return msg, fmt.Errorf("CampaignHash: %s", "Not found")
 	}
 
 	serviceId := campaign.ServiceId
 	usedContentIds := contentSent.Get(p.Msisdn, serviceId)
-	logCtx.WithField("usedContentIds", usedContentIds)
+	logCtx.WithFields(log.Fields{
+		"usedContentIds": usedContentIds,
+		"serviceId":      serviceId,
+	}).Debug("got candidates for service id")
 
 	avialableContentIds := service.Get(serviceId)
 	logCtx.WithField("avialableContentIds", avialableContentIds)
@@ -123,19 +135,24 @@ findContentId:
 	}
 	// update in-memory cache usedContentIds
 	contentSent.Push(p.Msisdn, serviceId, contentId)
-	logCtx.WithField("ContentId", contentId).Debug("choosen content")
+	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
 	path, ok := content.Map[contentId]
 	if !ok {
 		if retry < ContentSvc.sConfig.SearchRetryCount {
 			retry++
-			logCtx.WithFields(log.Fields{"ContentId": contentId, "Retry": retry}).
-				Error("Service ContentId not found in content")
+			logCtx.WithFields(log.Fields{
+				"contentId": contentId,
+				"retry":     retry,
+			}).Error("contentId not found in content")
 			goto findContentId
 		} else {
 			err = fmt.Errorf("Failed to find valid contentId: campaign: %s, msisdn: %s", p.CampaignHash, p.Msisdn)
-			logCtx.WithFields(log.Fields{"ContentId": contentId, "Retry": retry}).
-				Error(err.Error())
+			logCtx.WithFields(log.Fields{
+				"ContentId": contentId,
+				"retry":     retry,
+				"error":     err.Error(),
+			}).Error("fail")
 			return msg, err
 		}
 	}
