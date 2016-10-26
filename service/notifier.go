@@ -36,7 +36,7 @@ func NewNotifierService(conf NotifierConfig) Notifier {
 		rabbit := rabbit.NewPublisher(rabbit.RBMQConfig{
 			Url:     conf.Rbmq.Url,
 			ChanCap: conf.Rbmq.ChanCap,
-			Metrics: rabbit.InitMetrics(),
+			Metrics: rabbit.InitMetrics("contentd"),
 		})
 
 		n = &notifier{
