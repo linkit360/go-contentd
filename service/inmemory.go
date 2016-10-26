@@ -478,6 +478,9 @@ func (s *SentContents) Reload() error {
 func (s *SentContents) Get(msisdn string, serviceId int64) (contentIds map[int64]struct{}) {
 	var ok bool
 	t := ContentSentProperties{Msisdn: msisdn, ServiceId: serviceId}
+	log.WithFields(log.Fields{
+		"key": t.key(),
+	}).Debug("get contents")
 	if contentIds, ok = s.Map[t.key()]; ok {
 		return contentIds
 	}
@@ -492,10 +495,6 @@ func (s *SentContents) Clear(msisdn string, serviceId int64) {
 		"key": t.key(),
 	}).Debug("reset cache")
 	delete(s.Map, t.key())
-
-	if _, ok := s.Map[t.key()]; ok {
-		log.Error("reset cache failed")
-	}
 }
 
 //WithFields(log.Fields{})
@@ -505,6 +504,9 @@ func (s *SentContents) Clear(msisdn string, serviceId int64) {
 // and also we need to update in-memory cache of used content id for this msisdn and service id
 func (s *SentContents) Push(msisdn string, serviceId int64, contentId int64) {
 	t := ContentSentProperties{Msisdn: msisdn, ServiceId: serviceId}
+	log.WithFields(log.Fields{
+		"key": t.key(),
+	}).Debug("push contentid")
 	if _, ok := s.Map[t.key()]; !ok {
 		s.Map[t.key()] = make(map[int64]struct{})
 	}

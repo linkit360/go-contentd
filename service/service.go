@@ -122,7 +122,7 @@ findContentId:
 			if usedId, ok := usedContentIds[id]; ok {
 				logCtx.WithFields(log.Fields{
 					"contentId": usedId,
-				}).Debug("contentID already used, next..")
+				}).Debug("contentId already used, next..")
 
 				continue
 			}
@@ -138,7 +138,11 @@ findContentId:
 	if contentId == 0 {
 		logCtx.Debug("No content avialable, reset remembered cache..")
 		contentSent.Clear(p.Msisdn, serviceId)
-		for id, _ := range avialableContentIds {
+		usedContentIds = contentSent.Get(p.Msisdn, serviceId)
+		logCtx.WithFields(log.Fields{
+			"usedContentIds": usedContentIds,
+		}).Debug("now used content ids is")
+		for _, id := range avialableContentIds {
 			contentId = int64(id)
 			break
 		}
