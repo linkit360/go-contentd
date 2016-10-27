@@ -16,7 +16,6 @@ service:
   - service
   - content
   - service_content
-  - subscriptions
   - content_sent
 
   db:
