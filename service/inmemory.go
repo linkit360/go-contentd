@@ -25,9 +25,6 @@ func initCQR() error {
 	if err := content.Reload(); err != nil {
 		return fmt.Errorf("content.Reload: %s", err.Error())
 	}
-	if err := subscriptions.Reload(); err != nil {
-		return fmt.Errorf("subscriptions.Reload: %s", err.Error())
-	}
 	if err := contentSent.Reload(); err != nil {
 		return fmt.Errorf("sentContent.Reload: %s", err.Error())
 	}
@@ -65,10 +62,6 @@ func CQR(table string) (bool, error) {
 	case strings.Contains(table, "service_content"):
 		if err := service.Reload(); err != nil {
 			return false, fmt.Errorf("service_content: service.Reload: %s", err.Error())
-		}
-	case strings.Contains(table, "subscriptions"):
-		if err := subscriptions.Reload(); err != nil {
-			return false, fmt.Errorf("subscriptions.Reload: %s", err.Error())
 		}
 	case strings.Contains(table, "content_sent"):
 		if err := contentSent.Reload(); err != nil {
@@ -338,71 +331,6 @@ func (s *Campaigns) Reload() error {
 	s.Map = make(map[string]Campaign, len(records))
 	for _, campaign := range records {
 		s.Map[campaign.Hash] = campaign
-	}
-	return nil
-}
-
-// msisdn _ service_id ==> subscription_id
-
-// Keep in memory all active campaigns
-// Allow to get a subscription_id by msisdn and service_id
-// Reload when changes to subscriptions made
-// usage:
-// subscripions_id := subscripions.Map[ s.key() ]
-var subscriptions = &Subscriptions{}
-
-type Subscriptions struct {
-	sync.RWMutex
-	Map map[string]int64
-}
-type Subscription struct {
-	Msisdn         string
-	ServiceId      int64
-	SubscriptionId int64
-}
-
-func (s Subscription) key() string {
-	return fmt.Sprintf("%s-%d", s.Msisdn, s.ServiceId)
-}
-func (s *Subscriptions) Reload() error {
-	query := fmt.Sprintf("SELECT "+
-		"id, "+
-		"msisdn, "+
-		"id_service "+
-		"FROM %ssubscriptions "+
-		"WHERE created_at > (CURRENT_TIMESTAMP - "+
-		strconv.Itoa(ContentSvc.sConfig.SubscriptionsLoadDays)+
-		" * INTERVAL '1 day' ) "+
-		"", ContentSvc.sConfig.TablePrefix)
-	rows, err := ContentSvc.db.Query(query)
-	if err != nil {
-		return fmt.Errorf("Subscriptions Query: %s, query: %s", err.Error(), query)
-	}
-	defer rows.Close()
-
-	var records []Subscription
-	for rows.Next() {
-		record := Subscription{}
-
-		if err := rows.Scan(
-			&record.SubscriptionId,
-			&record.Msisdn,
-			&record.ServiceId,
-		); err != nil {
-			return err
-		}
-		records = append(records, record)
-	}
-	if rows.Err() != nil {
-		return fmt.Errorf("Subscriptions Reload RowsError: %s", err.Error())
-	}
-
-	s.Lock()
-	defer s.Unlock()
-
-	s.Map = make(map[string]int64, len(records))
-	for _, subscription := range records {
-		s.Map[subscription.key()] = subscription.SubscriptionId
 	}
 	return nil
 }
