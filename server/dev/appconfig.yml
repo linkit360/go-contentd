@@ -8,6 +8,7 @@ newrelic:
 
 service:
   retry_count: 10
+  subscriptions_load_days: 5
   table_prefix: xmp_
   uniq_days: 10
   tables:

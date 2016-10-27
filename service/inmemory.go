@@ -365,9 +365,16 @@ func (s Subscription) key() string {
 	return fmt.Sprintf("%s-%d", s.Msisdn, s.ServiceId)
 }
 func (s *Subscriptions) Reload() error {
-	query := fmt.Sprintf("select id, msisdn, id_service from "+
-		"%ssubscriptions where status = $1", ContentSvc.sConfig.TablePrefix)
-	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
+	query := fmt.Sprintf("SELECT "+
+		"id, "+
+		"msisdn, "+
+		"id_service "+
+		"FROM %ssubscriptions "+
+		"WHERE created_at > (CURRENT_TIMESTAMP - "+
+		strconv.Itoa(ContentSvc.sConfig.SubscriptionsLoadDays)+
+		" * INTERVAL '1 day' ) "+
+		"", ContentSvc.sConfig.TablePrefix)
+	rows, err := ContentSvc.db.Query(query)
 	if err != nil {
 		return fmt.Errorf("Subscriptions Query: %s, query: %s", err.Error(), query)
 	}

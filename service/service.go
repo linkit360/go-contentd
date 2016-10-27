@@ -44,12 +44,13 @@ type ContentService struct {
 	tables   map[string]struct{}
 }
 type ContentServiceConfig struct {
-	DbConf           db.DataBaseConfig `yaml:"db"`
-	Notifier         NotifierConfig    `notifier:"notifier"`
-	SearchRetryCount int               `default:"10" yaml:"retry_count"`
-	TablePrefix      string            `default:"xmp_" yaml:"table_prefix"`
-	UniqDays         int               `default:"10" yaml:"uniq_days"` // content would be uniq in these days
-	Tables           []string          `yaml:"tables"`
+	DbConf                db.DataBaseConfig `yaml:"db"`
+	Notifier              NotifierConfig    `notifier:"notifier"`
+	SubscriptionsLoadDays int               `default:"10" yaml:"subscriptions_load_days"`
+	SearchRetryCount      int               `default:"10" yaml:"retry_count"`
+	TablePrefix           string            `default:"xmp_" yaml:"table_prefix"`
+	UniqDays              int               `default:"10" yaml:"uniq_days"` // content would be uniq in these days
+	Tables                []string          `yaml:"tables"`
 }
 
 type GetUrlByCampaignHashParams struct {
