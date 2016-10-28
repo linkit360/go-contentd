@@ -7,9 +7,29 @@ run:
 	./server
 
 release:
+	rm -v bin/contentd-linux-amd64; \
 	export GOOS=linux; export GOARCH=amd64; \
   go build -ldflags "-s -w" -o bin/contentd-linux-amd64
 
 send:
 	scp -i ~/.ssh/mobilink_centos.pem bin/contentd-linux-amd64 centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/bin/contentd-linux-amd64
 	scp -i ~/.ssh/mobilink_centos.pem dev/appconfig.yml centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/dev/
+
+config:
+	scp -i ~/.ssh/mobilink_centos.pem dev/appconfig.yml centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/dev/
+
+
+cqrcampaign:
+	curl http://localhost:50302/cqr?t=campaign
+
+cqrservice:
+	curl http://localhost:50302/cqr?t=service
+
+cqrcontent:
+	curl http://localhost:50302/cqr?t=content
+
+cqrservice_content:
+	curl http://localhost:50302/cqr?t=service_content
+
+cqrcontent_sent:
+	curl http://localhost:50302/cqr?t=content_sent
