@@ -156,7 +156,7 @@ type ServiceContent struct {
 }
 
 func (s *Services) Reload() (err error) {
-	log.WithFields(log.Fields{}).Debug("services reload requested")
+	log.WithFields(log.Fields{}).Debug("services reload...")
 	begin := time.Now()
 	defer func(err error) {
 		errStr := ""
@@ -267,7 +267,7 @@ type Contents struct {
 }
 
 func (s *Contents) Reload() (err error) {
-	log.WithFields(log.Fields{}).Debug("content reload requested")
+	log.WithFields(log.Fields{}).Debug("content reload...")
 	begin := time.Now()
 	defer func(err error) {
 		errStr := ""
@@ -340,7 +340,7 @@ type Campaign struct {
 }
 
 func (s *Campaigns) Reload() (err error) {
-	log.WithFields(log.Fields{}).Debug("campaign reload requested")
+	log.WithFields(log.Fields{}).Debug("campaign reload...")
 	begin := time.Now()
 	defer func(err error) {
 		errStr := ""
@@ -430,7 +430,7 @@ func (t ContentSentProperties) key() string {
 // Load sent contents to filter content that had been seen by the msisdn.
 // created at == before date specified in config
 func (s *SentContents) Reload() (err error) {
-	log.WithFields(log.Fields{}).Debug("content_sent reload requested")
+	log.WithFields(log.Fields{}).Debug("content_sent reload...")
 	begin := time.Now()
 	defer func(err error) {
 		errStr := ""
