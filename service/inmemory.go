@@ -12,6 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
+	"database/sql"
 	"github.com/vostrok/contentd/server/src/metrics"
 )
 
@@ -154,27 +155,45 @@ type ServiceContent struct {
 	IdContent int64
 }
 
-func (s *Services) Reload() error {
-	query := fmt.Sprintf("select id, price from %sservices where status = $1", ContentSvc.sConfig.TablePrefix)
-	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
+func (s *Services) Reload() (err error) {
+	log.WithFields(log.Fields{}).Debug("services reload requested")
+	begin := time.Now()
+	defer func(err error) {
+		errStr := ""
+		if err != nil {
+			errStr = err.Error()
+		}
+		log.WithFields(log.Fields{
+			"error": errStr,
+			"took":  time.Since(begin),
+		}).Debug("service reload")
+	}(err)
+
+	query := fmt.Sprintf("select id, price from %sservices where status = $1",
+		ContentSvc.sConfig.TablePrefix)
+	var rows *sql.Rows
+	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
-		return fmt.Errorf("services QueryServices: %s, query: %s", err.Error(), query)
+		err = fmt.Errorf("db.Query: %s, query: %s", err.Error(), query)
+		return
 	}
 	defer rows.Close()
 
 	var svcs []Service
 	for rows.Next() {
 		var srv Service
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&srv.Id,
 			&srv.Price,
 		); err != nil {
+			err = fmt.Errorf("rows.Scan: %s", err.Error())
 			return err
 		}
 		svcs = append(svcs, srv)
 	}
 	if rows.Err() != nil {
-		return fmt.Errorf("RowsError: %s", err.Error())
+		err = fmt.Errorf("rows.Err: %s", err.Error())
+		return
 	}
 	priceMap := make(map[int64]float64)
 	for _, v := range svcs {
@@ -189,23 +208,26 @@ func (s *Services) Reload() error {
 		" and id_service = any($2::integer[])", ContentSvc.sConfig.TablePrefix)
 	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS, "{"+strings.Join(serviceIdsStr, ", ")+"}")
 	if err != nil {
-		return fmt.Errorf("service_content QueryServices: %s, query: %s", err.Error(), query)
+		err = fmt.Errorf("db.Query: %s, query: %s", err.Error(), query)
+		return
 	}
 	defer rows.Close()
 
 	var serviceContentAr []ServiceContent
 	for rows.Next() {
 		var serviceContent ServiceContent
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&serviceContent.IdService,
 			&serviceContent.IdContent,
 		); err != nil {
-			return err
+			err = fmt.Errorf("rows.Scan %s", err.Error())
+			return
 		}
 		serviceContentAr = append(serviceContentAr, serviceContent)
 	}
 	if rows.Err() != nil {
-		return fmt.Errorf("service_content RowsError: %s", err.Error())
+		err = fmt.Errorf("rows.Error: %s", err.Error())
+		return
 	}
 
 	s.Lock()
@@ -244,33 +266,51 @@ type Contents struct {
 	Map map[int64]Content
 }
 
-func (s *Contents) Reload() error {
+func (s *Contents) Reload() (err error) {
+	log.WithFields(log.Fields{}).Debug("content reload requested")
+	begin := time.Now()
+	defer func(err error) {
+		errStr := ""
+		if err != nil {
+			errStr = err.Error()
+		}
+		log.WithFields(log.Fields{
+			"error": errStr,
+			"took":  time.Since(begin),
+		}).Debug("content reload")
+	}(err)
+
 	query := fmt.Sprintf("select "+
 		"id, "+
 		"object, "+
 		"content_name "+
 		"from %scontent where status = $1",
 		ContentSvc.sConfig.TablePrefix)
-	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
+
+	var rows *sql.Rows
+	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
-		return fmt.Errorf("content QueryServices: %s, query: %s", err.Error(), query)
+		err = fmt.Errorf("db.Query: %s, query: %s", err.Error(), query)
+		return
 	}
 	defer rows.Close()
 
 	var contents []Content
 	for rows.Next() {
 		var c Content
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&c.Id,
 			&c.Path,
 			&c.Name,
 		); err != nil {
-			return fmt.Errorf("rows.Scan: %s", err.Error())
+			err = fmt.Errorf("rows.Scan: %s", err.Error())
+			return
 		}
 		contents = append(contents, c)
 	}
 	if rows.Err() != nil {
-		return fmt.Errorf("RowsError: %s", err.Error())
+		err = fmt.Errorf("rows.Err: %s", err.Error())
+		return
 	}
 
 	s.Lock()
@@ -299,30 +339,46 @@ type Campaign struct {
 	ServiceId int64
 }
 
-func (s *Campaigns) Reload() error {
+func (s *Campaigns) Reload() (err error) {
+	log.WithFields(log.Fields{}).Debug("campaign reload requested")
+	begin := time.Now()
+	defer func(err error) {
+		errStr := ""
+		if err != nil {
+			errStr = err.Error()
+		}
+		log.WithFields(log.Fields{
+			"error": errStr,
+			"took":  time.Since(begin),
+		}).Debug("campaign reload")
+	}(err)
+
 	query := fmt.Sprintf("select id, hash, service_id_1 from %scampaigns where status = $1",
 		ContentSvc.sConfig.TablePrefix)
-	rows, err := ContentSvc.db.Query(query, ACTIVE_STATUS)
+	var rows *sql.Rows
+	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
-		return fmt.Errorf("QueryServices: %s, query: %s", err.Error(), query)
+		err = fmt.Errorf("db.Query: %s, query: %s", err.Error(), query)
+		return
 	}
 	defer rows.Close()
 
 	var records []Campaign
 	for rows.Next() {
 		record := Campaign{}
-
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&record.Id,
 			&record.Hash,
 			&record.ServiceId,
 		); err != nil {
-			return err
+			err = fmt.Errorf("rows.Scan: %s", err.Error())
+			return
 		}
 		records = append(records, record)
 	}
 	if rows.Err() != nil {
-		return fmt.Errorf("RowsError: %s", err.Error())
+		err = fmt.Errorf("rows.Err: %s", err.Error())
+		return
 	}
 
 	s.Lock()
@@ -373,17 +429,31 @@ func (t ContentSentProperties) key() string {
 
 // Load sent contents to filter content that had been seen by the msisdn.
 // created at == before date specified in config
-func (s *SentContents) Reload() error {
+func (s *SentContents) Reload() (err error) {
+	log.WithFields(log.Fields{}).Debug("content_sent reload requested")
+	begin := time.Now()
+	defer func(err error) {
+		errStr := ""
+		if err != nil {
+			errStr = err.Error()
+		}
+		log.WithFields(log.Fields{
+			"error": errStr,
+			"took":  time.Since(begin),
+		}).Debug("content_sent reload")
+	}(err)
+
 	query := fmt.Sprintf("select msisdn, id_service, id_content "+
 		"from %scontent_sent "+
 		"where sent_at > (CURRENT_TIMESTAMP - INTERVAL '"+
 		strconv.Itoa(ContentSvc.sConfig.UniqDays)+" days')",
 		ContentSvc.sConfig.TablePrefix)
 
-	rows, err := ContentSvc.db.Query(query)
-
+	var rows *sql.Rows
+	rows, err = ContentSvc.db.Query(query)
 	if err != nil {
-		return fmt.Errorf("SentContent Reload QueryServices: %s, query: %s", err.Error(), query)
+		err = fmt.Errorf("db.Query: %s, query: %s", err.Error(), query)
+		return
 	}
 	defer rows.Close()
 
@@ -391,17 +461,19 @@ func (s *SentContents) Reload() error {
 	for rows.Next() {
 		record := ContentSentProperties{}
 
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&record.Msisdn,
 			&record.ServiceId,
 			&record.ContentId,
 		); err != nil {
-			return err
+			err = fmt.Errorf("rows.Scan: %s", err.Error())
+			return
 		}
 		records = append(records, record)
 	}
 	if rows.Err() != nil {
-		return fmt.Errorf("ContentSent Reload RowsError: %s", err.Error())
+		err = fmt.Errorf("rows.Err: %s", err.Error())
+		return
 	}
 
 	s.Lock()
