@@ -19,12 +19,11 @@ func (rpc *RPCContentService) GetContentByCampaign(
 	}()
 	metrics.M.RequestsOverall.Count.Add(1)
 
-	res, err = service.GetUrlByCampaignHash(req)
+	*res, err = service.GetUrlByCampaignHash(req)
 	if err != nil {
 		metrics.M.RequestsOverall.Errors.Add(1)
 		return fmt.Errorf("GetContentByServiceId: %s", err.Error())
 	}
-
 	return nil
 }
 

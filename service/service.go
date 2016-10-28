@@ -19,12 +19,6 @@ const ACTIVE_STATUS = 1
 
 var ContentSvc ContentService
 
-type ContentInterface interface {
-	InitService(sConf ContentServiceConfig)
-
-	GetUrlByCampaignHash(msisdn, campaignHash string) (path string, err error)
-}
-
 func InitService(sConf ContentServiceConfig) {
 	log.SetLevel(log.DebugLevel)
 
@@ -54,18 +48,18 @@ type ContentServiceConfig struct {
 }
 
 type GetUrlByCampaignHashParams struct {
-	Msisdn       string
-	CampaignHash string
-	Tid          string
-	CountryCode  int64
-	OperatorCode int64
+	Msisdn       string `json:"msisdn"`
+	CampaignHash string `json:"campaign_hash"`
+	Tid          string `json:"tid"`
+	CountryCode  int64  `json:"country_code"`
+	OperatorCode int64  `json:"operator_code"`
 }
 
 // Get Content by campaign hash
 // 1) find first avialable contentId
 // 2) reset cache if nothing found
 // 3) record that the content is shown to the user
-func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg *ContentSentProperties, err error) {
+func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperties, err error) {
 	logCtx := log.WithFields(log.Fields{
 		"msisdn":       p.Msisdn,
 		"campaignHash": p.CampaignHash,
@@ -177,7 +171,7 @@ findContentId:
 	// and, as we got this variables during "get path" process
 	// we save them into database, not to get them again
 	// anyway, it is possible to find a better way in future
-	msg = &ContentSentProperties{
+	msg = ContentSentProperties{
 		Msisdn:       p.Msisdn,
 		Price:        int(service.Map[serviceId].Price),
 		Tid:          p.Tid,

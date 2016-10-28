@@ -58,7 +58,6 @@ func runRPC(appConfig config.AppConfig) {
 
 	server := rpc.NewServer()
 	server.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
-
 	server.RegisterName("SVC", &handlers.RPCContentService{})
 
 	for {

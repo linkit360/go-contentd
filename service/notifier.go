@@ -8,7 +8,7 @@ import (
 )
 
 type Notifier interface {
-	ContentSentNotify(msg *ContentSentProperties) error
+	ContentSentNotify(msg ContentSentProperties) error
 }
 
 type NotifierConfig struct {
@@ -49,7 +49,7 @@ func NewNotifierService(conf NotifierConfig) Notifier {
 	return n
 }
 
-func (service notifier) ContentSentNotify(msg *ContentSentProperties) error {
+func (service notifier) ContentSentNotify(msg ContentSentProperties) error {
 
 	event := EventNotify{
 		EventName: "content_sent",
