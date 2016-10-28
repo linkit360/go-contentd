@@ -16,6 +16,10 @@ import (
 	"github.com/vostrok/contentd/server/src/metrics"
 )
 
+func init() {
+	log.SetLevel(log.DebugLevel)
+}
+
 func initCQR() error {
 	if err := campaign.Reload(); err != nil {
 		return fmt.Errorf("campaign.Reload: %s", err.Error())
