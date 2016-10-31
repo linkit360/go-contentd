@@ -91,6 +91,7 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	serviceId := campaign.ServiceId
 	usedContentIds := contentSent.Get(p.Msisdn, serviceId)
 	logCtx.WithFields(log.Fields{
+		"tid":            p.Tid,
 		"usedContentIds": usedContentIds,
 		"serviceId":      serviceId,
 	}).Debug("got used content ids")
@@ -102,7 +103,9 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 
 	if len(avialableContentIds) == 0 {
 		err = fmt.Errorf("No content for campaign %s at all", p.CampaignHash)
-		logCtx.WithField("error", err.Error()).Errorf("No content avialabale at all")
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Errorf("No content avialabale at all")
 		return msg, err
 	}
 
@@ -160,7 +163,7 @@ findContentId:
 		} else {
 			err = fmt.Errorf("Failed to find valid contentId: campaign: %s, msisdn: %s", p.CampaignHash, p.Msisdn)
 			logCtx.WithFields(log.Fields{
-				"ContentId": contentId,
+				"contentId": contentId,
 				"retry":     retry,
 				"error":     err.Error(),
 			}).Error("fail")
@@ -195,8 +198,8 @@ findContentId:
 			"error": err.Error(),
 		}).Info("notify content sent error")
 	} else {
-		logCtx.Info("notiied")
+		logCtx.Info("notified")
 	}
-	logCtx.Info("success")
+	logCtx.WithFields(log.Fields{"contentSentProperties": fmt.Sprintf("%#v", msg)}).Info("success")
 	return msg, nil
 }

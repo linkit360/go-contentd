@@ -208,9 +208,9 @@ func (s *Services) Reload() (err error) {
 		err = fmt.Errorf("rows.Err: %s", err.Error())
 		return
 	}
-	priceMap := make(map[int64]float64)
+	svcMap := make(map[int64]Service)
 	for _, v := range svcs {
-		priceMap[v.Id] = v.Price
+		svcMap[v.Id] = v
 	}
 
 	serviceIdsStr := []string{}
@@ -254,7 +254,10 @@ func (s *Services) Reload() (err error) {
 		}
 		srv.ContentIds = append(srv.ContentIds, serviceContent.IdContent)
 		srv.Id = serviceContent.IdService
-		srv.Price = priceMap[serviceContent.IdService]
+		svc := svcMap[serviceContent.IdService]
+		srv.Price = svc.Price
+		srv.DelayHours = svc.DelayHours
+		srv.PaidHours = svc.PaidHours
 		s.Map[serviceContent.IdService] = srv
 
 	}
