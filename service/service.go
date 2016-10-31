@@ -74,7 +74,8 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 		p.Tid == "" {
 		err = errors.New("Empty required params")
 		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
+			"error":  err.Error(),
+			"params": p,
 		}).Errorf("required params are empty")
 		return msg, errors.New("Required params not found")
 	}
