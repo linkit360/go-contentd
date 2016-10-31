@@ -147,6 +147,8 @@ type Services struct {
 type Service struct {
 	Id         int64
 	Price      float64
+	PaidHours  int
+	DelayHours int
 	ContentIds []int64
 }
 type Content struct {
@@ -173,7 +175,12 @@ func (s *Services) Reload() (err error) {
 		}).Debug("service reload")
 	}(err)
 
-	query := fmt.Sprintf("select id, price from %sservices where status = $1",
+	query := fmt.Sprintf("SELECT "+
+		"id, "+
+		"paid_hours, "+
+		"delay_hours, "+
+		"price "+
+		"from %sservices where status = $1",
 		ContentSvc.sConfig.TablePrefix)
 	var rows *sql.Rows
 	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS)
@@ -188,6 +195,8 @@ func (s *Services) Reload() (err error) {
 		var srv Service
 		if err = rows.Scan(
 			&srv.Id,
+			&srv.PaidHours,
+			&srv.DelayHours,
 			&srv.Price,
 		); err != nil {
 			err = fmt.Errorf("rows.Scan: %s", err.Error())
@@ -422,6 +431,8 @@ type ContentSentProperties struct {
 	SubscriptionId int64  `json:"subscription_id"`
 	CountryCode    int64  `json:"country_code"`
 	OperatorCode   int64  `json:"operator_code"`
+	PaidHours      int    `json:"paid_hours"`
+	DelayHours     int    `json:"delay_hours"`
 }
 
 // Used to get a key of used content ids

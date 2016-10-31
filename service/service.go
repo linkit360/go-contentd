@@ -172,9 +172,10 @@ findContentId:
 	// and, as we got this variables during "get path" process
 	// we save them into database, not to get them again
 	// anyway, it is possible to find a better way in future
+	srv := service.Map[serviceId]
 	msg = ContentSentProperties{
 		Msisdn:       p.Msisdn,
-		Price:        int(service.Map[serviceId].Price),
+		Price:        int(srv.Price),
 		Tid:          p.Tid,
 		ContentPath:  contentInfo.Path,
 		ContentName:  contentInfo.Name,
@@ -184,6 +185,8 @@ findContentId:
 		ServiceId:    serviceId,
 		CountryCode:  p.CountryCode,
 		OperatorCode: p.OperatorCode,
+		PaidHours:    srv.PaidHours,
+		DelayHours:   srv.DelayHours,
 	}
 
 	// record sent content
