@@ -12,6 +12,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/vostrok/contentd/server/src/metrics"
 	"github.com/vostrok/db"
 )
 
@@ -81,6 +82,8 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	}
 	campaign, ok := campaign.Map[p.CampaignHash]
 	if !ok {
+
+		metrics.M.CampaignNotFound.Add(1)
 		err = errors.New("Not found")
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),

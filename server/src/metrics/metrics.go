@@ -11,14 +11,16 @@ import (
 var M AppMetrics
 
 type AppMetrics struct {
-	RequestsOverall LocationMetric
-	CQRRequest      LocationMetric
+	RequestsOverall  LocationMetric
+	CQRRequest       LocationMetric
+	CampaignNotFound metrics.Gauge
 }
 
 func Init() AppMetrics {
 	M = AppMetrics{
-		RequestsOverall: NewLocationMetric("requests_overall"),
-		CQRRequest:      NewLocationMetric("cqr_request"),
+		RequestsOverall:  NewLocationMetric("requests_overall"),
+		CQRRequest:       NewLocationMetric("cqr_request"),
+		CampaignNotFound: expvar.NewGauge("campaign_not_found"),
 	}
 	return M
 }
