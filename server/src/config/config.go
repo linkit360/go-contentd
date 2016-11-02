@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
+	"fmt"
 	"github.com/vostrok/contentd/service"
 )
 
@@ -46,7 +47,7 @@ func LoadConfig() AppConfig {
 	appConfig.Service.Notifier.Rbmq.Url = envString("MQ_URL", appConfig.Service.Notifier.Rbmq.Url)
 	appConfig.Service.Notifier.Rbmq.ChanCap = envInt64("MQ_CHANNEL_GAP", appConfig.Service.Notifier.Rbmq.ChanCap)
 
-	log.WithField("config", appConfig).Info("Config loaded")
+	log.WithField("config", fmt.Sprintf("%#v", appConfig)).Info("Config loaded")
 	return appConfig
 }
 

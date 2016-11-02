@@ -1,4 +1,4 @@
-.PHONY: dev run release send
+.PHONY: dev run senddev build sendprod
 
 dev:
 	rm ./server ; go build ;./server 
@@ -6,18 +6,18 @@ dev:
 run:
 	./server
 
-release:
+build:
 	rm -v bin/contentd-linux-amd64; \
 	export GOOS=linux; export GOARCH=amd64; \
   go build -ldflags "-s -w" -o bin/contentd-linux-amd64
 
-send:
+senddev:
+	scp -i ~/.ssh/mobilink_centos_testing_stage.pem centos@35.154.8.158:/home/centos/go/src/github.com/vostrok/contentd/server/bin/contentd-linux-amd64
+	scp -i ~/.ssh/mobilink_centos_testing_stage.pem centos@35.154.8.158:/home/centos/go/src/github.com/vostrok/contentd/server/dev/
+
+sendprod:
 	scp -i ~/.ssh/mobilink_centos.pem bin/contentd-linux-amd64 centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/bin/contentd-linux-amd64
-	scp -i ~/.ssh/mobilink_centos.pem dev/appconfig.yml centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/dev/
-
-config:
-	scp -i ~/.ssh/mobilink_centos.pem dev/appconfig.yml centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/dev/
-
+	scp -i ~/.ssh/mobilink_centos.pem dev/appconfig.prod.yml centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/dev/
 
 cqrcampaign:
 	curl http://localhost:50302/cqr?t=campaign
@@ -33,3 +33,6 @@ cqrservice_content:
 
 cqrcontent_sent:
 	curl http://localhost:50302/cqr?t=content_sent
+
+call:
+	curl curl -H 'Content-Type: application/json' -H 'Accept: application/json' --data-binary '{"jsonrpc":"1.0","id":"curltext","method":"SVC.GetContentByCampaign","params":{ }}' -H 'content-type:text/plain;' http://localhost:50302
