@@ -15,7 +15,7 @@ type NotifierConfig struct {
 	Queues struct {
 		ContentSent string `yaml:"content_sent"`
 	} `yaml:"queues"`
-	Rbmq rabbit.RBMQConfig `yaml:"rabbit"`
+	Rbmq rabbit.RBMQConfig `yaml:"rbmq"`
 }
 type queues struct {
 	contentSent string
@@ -33,12 +33,7 @@ type EventNotify struct {
 func NewNotifierService(conf NotifierConfig) Notifier {
 	var n Notifier
 	{
-		rabbit := rabbit.NewPublisher(rabbit.RBMQConfig{
-			Url:     conf.Rbmq.Url,
-			ChanCap: conf.Rbmq.ChanCap,
-			Metrics: rabbit.InitMetrics("contentd"),
-		})
-
+		rabbit := rabbit.NewPublisher(conf.Rbmq, rabbit.InitMetrics("contentd"))
 		n = &notifier{
 			q: queues{
 				contentSent: conf.Queues.ContentSent,

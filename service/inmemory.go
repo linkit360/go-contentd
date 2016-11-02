@@ -181,7 +181,7 @@ func (s *Services) Reload() (err error) {
 		"delay_hours, "+
 		"price "+
 		"from %sservices where status = $1",
-		ContentSvc.sConfig.TablePrefix)
+		ContentSvc.dbConf.TablePrefix)
 	var rows *sql.Rows
 	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
@@ -218,7 +218,7 @@ func (s *Services) Reload() (err error) {
 		serviceIdsStr = append(serviceIdsStr, strconv.FormatInt(v.Id, 10))
 	}
 	query = fmt.Sprintf("select id_service, id_content from %sservice_content where status = $1"+
-		" and id_service = any($2::integer[])", ContentSvc.sConfig.TablePrefix)
+		" and id_service = any($2::integer[])", ContentSvc.dbConf.TablePrefix)
 	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS, "{"+strings.Join(serviceIdsStr, ", ")+"}")
 	if err != nil {
 		err = fmt.Errorf("db.Query: %s, query: %s", err.Error(), query)
@@ -301,7 +301,7 @@ func (s *Contents) Reload() (err error) {
 		"object, "+
 		"content_name "+
 		"from %scontent where status = $1",
-		ContentSvc.sConfig.TablePrefix)
+		ContentSvc.dbConf.TablePrefix)
 
 	var rows *sql.Rows
 	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS)
@@ -370,7 +370,7 @@ func (s *Campaigns) Reload() (err error) {
 	}(err)
 
 	query := fmt.Sprintf("select id, hash, service_id_1 from %scampaigns where status = $1",
-		ContentSvc.sConfig.TablePrefix)
+		ContentSvc.dbConf.TablePrefix)
 	var rows *sql.Rows
 	rows, err = ContentSvc.db.Query(query, ACTIVE_STATUS)
 	if err != nil {
@@ -465,7 +465,7 @@ func (s *SentContents) Reload() (err error) {
 		"from %scontent_sent "+
 		"where sent_at > (CURRENT_TIMESTAMP - INTERVAL '"+
 		strconv.Itoa(ContentSvc.sConfig.UniqDays)+" days')",
-		ContentSvc.sConfig.TablePrefix)
+		ContentSvc.dbConf.TablePrefix)
 
 	var rows *sql.Rows
 	rows, err = ContentSvc.db.Query(query)

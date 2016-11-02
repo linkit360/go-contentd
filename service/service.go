@@ -20,13 +20,14 @@ const ACTIVE_STATUS = 1
 
 var ContentSvc ContentService
 
-func InitService(sConf ContentServiceConfig) {
+func InitService(sConf ContentServiceConfig, dbConf db.DataBaseConfig, notifConf NotifierConfig) {
 	log.SetLevel(log.DebugLevel)
 
-	ContentSvc.db = db.Init(sConf.DbConf)
+	ContentSvc.db = db.Init(dbConf)
+	ContentSvc.dbConf = dbConf
 
 	ContentSvc.sConfig = sConf
-	ContentSvc.notifier = NewNotifierService(sConf.Notifier)
+	ContentSvc.notifier = NewNotifierService(notifConf)
 	if err := initCQR(); err != nil {
 		log.WithField("error", err.Error()).Fatal("Init CQR")
 	}
@@ -34,18 +35,16 @@ func InitService(sConf ContentServiceConfig) {
 
 type ContentService struct {
 	db       *sql.DB
+	dbConf   db.DataBaseConfig
 	sConfig  ContentServiceConfig
 	notifier Notifier
 	tables   map[string]struct{}
 }
 type ContentServiceConfig struct {
-	DbConf                db.DataBaseConfig `yaml:"db"`
-	Notifier              NotifierConfig    `notifier:"notifier"`
-	SubscriptionsLoadDays int               `default:"10" yaml:"subscriptions_load_days"`
-	SearchRetryCount      int               `default:"10" yaml:"retry_count"`
-	TablePrefix           string            `default:"xmp_" yaml:"table_prefix"`
-	UniqDays              int               `default:"10" yaml:"uniq_days"` // content would be uniq in these days
-	Tables                []string          `yaml:"tables"`
+	SubscriptionsLoadDays int      `default:"10" yaml:"subscriptions_load_days"`
+	SearchRetryCount      int      `default:"10" yaml:"retry_count"`
+	UniqDays              int      `default:"10" yaml:"uniq_days"` // content would be uniq in these days
+	Tables                []string `yaml:"tables"`
 }
 
 type GetUrlByCampaignHashParams struct {

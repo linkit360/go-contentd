@@ -17,15 +17,14 @@ import (
 	"github.com/vostrok/contentd/server/src/config"
 	"github.com/vostrok/contentd/server/src/handlers"
 	"github.com/vostrok/contentd/server/src/metrics"
-	"github.com/vostrok/contentd/server/src/newrelic"
 	"github.com/vostrok/contentd/service"
 )
 
 func Run() {
 	appConfig := config.LoadConfig()
 	metrics.Init()
-	newrelic.Init(appConfig.NewRelic)
-	service.InitService(appConfig.Service)
+
+	service.InitService(appConfig.Service, appConfig.DbConf, appConfig.Notifier)
 
 	nuCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(nuCPU)

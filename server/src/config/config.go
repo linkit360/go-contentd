@@ -2,28 +2,26 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
-	"fmt"
 	"github.com/vostrok/contentd/service"
+	"github.com/vostrok/db"
 )
 
 type ServerConfig struct {
 	RPCPort  string `default:"50301" yaml:"rpc_port"`
 	HttpPort string `default:"50302" yaml:"http_port"`
 }
-type NewRelicConfig struct {
-	AppName string `default:"contentd.linkit360.com"`
-	License string `default:"4d635427ad90ca786ca2db6aa246ed651730b933"`
-}
 type AppConfig struct {
 	Server   ServerConfig                 `yaml:"server"`
-	NewRelic NewRelicConfig               `yaml:"newrelic"`
 	Service  service.ContentServiceConfig `yaml:"service"`
+	DbConf   db.DataBaseConfig            `yaml:"db"`
+	Notifier service.NotifierConfig       `yaml:"notifier"`
 }
 
 func LoadConfig() AppConfig {
@@ -41,11 +39,7 @@ func LoadConfig() AppConfig {
 	appConfig.Server.RPCPort = envString("PORT", appConfig.Server.RPCPort)
 	appConfig.Server.HttpPort = envString("METRICS_PORT", appConfig.Server.HttpPort)
 
-	appConfig.Service.TablePrefix = envString("TABLE_PREFIX", appConfig.Service.TablePrefix)
-	appConfig.Service.UniqDays = envInt("UNIQ_DAYS", appConfig.Service.UniqDays)
-
-	appConfig.Service.Notifier.Rbmq.Url = envString("MQ_URL", appConfig.Service.Notifier.Rbmq.Url)
-	appConfig.Service.Notifier.Rbmq.ChanCap = envInt64("MQ_CHANNEL_GAP", appConfig.Service.Notifier.Rbmq.ChanCap)
+	appConfig.Notifier.Rbmq.Host = envString("RBMQ_HOST", appConfig.Notifier.Rbmq.Host)
 
 	log.WithField("config", fmt.Sprintf("%#v", appConfig)).Info("Config loaded")
 	return appConfig
