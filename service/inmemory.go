@@ -436,6 +436,8 @@ type ContentSentProperties struct {
 	OperatorCode   int64  `json:"operator_code"`
 	PaidHours      int    `json:"paid_hours"`
 	DelayHours     int    `json:"delay_hours"`
+	Publisher      string `json:"publisher"`
+	Pixel          string `json:"pixel"`
 }
 
 // Used to get a key of used content ids

@@ -12,10 +12,12 @@ build:
   go build -ldflags "-s -w" -o bin/contentd-linux-amd64
 
 senddev:
+	ssh -i ~/.ssh/mobilink_centos_testing_stage.pem centos@35.154.8.158 rm /home/centos/go/src/github.com/vostrok/contentd/server/bin/contentd-linux-amd64
 	scp -i ~/.ssh/mobilink_centos_testing_stage.pem bin/contentd-linux-amd64 centos@35.154.8.158:/home/centos/go/src/github.com/vostrok/contentd/server/bin/contentd-linux-amd64
 	scp -i ~/.ssh/mobilink_centos_testing_stage.pem dev/appconfig.yml centos@35.154.8.158:/home/centos/go/src/github.com/vostrok/contentd/server/dev/
 
 sendprod:
+	ssh -i ~/.ssh/mobilink_centos.pem centos@52.66.23.201 rm /home/centos/go/src/github.com/vostrok/contentd/server/bin/contentd-linux-amd64
 	scp -i ~/.ssh/mobilink_centos.pem bin/contentd-linux-amd64 centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/bin/contentd-linux-amd64
 	scp -i ~/.ssh/mobilink_centos.pem dev/appconfig.prod.yml centos@52.66.23.201:/home/centos/go/src/github.com/vostrok/contentd/server/dev/
 

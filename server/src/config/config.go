@@ -39,7 +39,7 @@ func LoadConfig() AppConfig {
 	appConfig.Server.RPCPort = envString("PORT", appConfig.Server.RPCPort)
 	appConfig.Server.HttpPort = envString("METRICS_PORT", appConfig.Server.HttpPort)
 
-	appConfig.Notifier.Rbmq.Host = envString("RBMQ_HOST", appConfig.Notifier.Rbmq.Host)
+	appConfig.Notifier.Rbmq.Conn.Host = envString("RBMQ_HOST", appConfig.Notifier.Rbmq.Conn.Host)
 
 	log.WithField("config", fmt.Sprintf("%#v", appConfig)).Info("Config loaded")
 	return appConfig

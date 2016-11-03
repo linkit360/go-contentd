@@ -53,6 +53,8 @@ type GetUrlByCampaignHashParams struct {
 	Tid          string `json:"tid"`
 	CountryCode  int64  `json:"country_code"`
 	OperatorCode int64  `json:"operator_code"`
+	Publisher    string `json:"publisher"`
+	Pixel        string `json:"pixel"`
 }
 
 // Get Content by campaign hash
@@ -192,6 +194,8 @@ findContentId:
 		OperatorCode: p.OperatorCode,
 		PaidHours:    srv.PaidHours,
 		DelayHours:   srv.DelayHours,
+		Publisher:    p.Publisher,
+		Pixel:        p.Pixel,
 	}
 
 	// record sent content
