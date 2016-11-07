@@ -36,10 +36,7 @@ func Init() AppMetrics {
 	return M
 }
 
-//var quantiles = []int{50, 90, 95, 99}
-
 type MethodTimeMetric struct {
-	//th       kitmetrics.TimeHistogram
 	overtime kitmetrics.Counter
 }
 
@@ -47,7 +44,6 @@ func (m MethodTimeMetric) CatchOverTime(dur time.Duration, max time.Duration) {
 	if dur > max {
 		m.overtime.Add(1)
 	}
-	//m.th.Observe(dur)
 }
 
 type LocationMetric struct {
@@ -61,8 +57,6 @@ func NewLocationMetric(name string) (lm LocationMetric) {
 		log.WithField("error", "NewLocationMetric").Fatal("no name for location metric")
 	}
 	lm.Time = MethodTimeMetric{
-		//kitmetrics.NewTimeHistogram(time.Millisecond,
-		//	expvar.NewHistogram("duration_ms_"+name, 0, 10000, 3, quantiles...)),
 		expvar.NewCounter("overtime_" + name),
 	}
 	lm.Count = expvar.NewCounter("access_" + name)
