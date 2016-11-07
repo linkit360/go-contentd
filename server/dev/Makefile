@@ -7,9 +7,11 @@ run:
 	./server
 
 build:
-	rm -v bin/contentd-linux-amd64; \
+	rm -v bin/contentd-linux-amd64;
 	export GOOS=linux; export GOARCH=amd64; \
-  go build -ldflags "-s -w" -o bin/contentd-linux-amd64
+        go build -ldflags "-s -w" -o bin/contentd-linux-amd64; \
+	rm ~/linkit/contentd-linux-amd64; \
+	cp  bin/contentd-linux-amd64 ~/linkit
 
 senddev:
 	# ssh -i ~/.ssh/mobilink_centos_testing_stage.pem centos@35.154.8.158 rm /home/centos/linkit/contentd-linux-amd64

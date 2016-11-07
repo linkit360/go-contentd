@@ -84,7 +84,7 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	campaign, ok := campaign.Map[p.CampaignHash]
 	if !ok {
 
-		metrics.M.CampaignNotFound.Add(1)
+		metrics.M.Counters.CampaignNotFound++
 		err = errors.New("Not found")
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
