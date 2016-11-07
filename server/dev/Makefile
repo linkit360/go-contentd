@@ -1,4 +1,4 @@
-.PHONY: dev run senddev build sendprod
+.PHONY: dev run rm senddev build sendprod
 
 dev:
 	rm ./server ; go build ;./server 
@@ -6,11 +6,12 @@ dev:
 run:
 	./server
 
+rm:
+	rm -v bin/contentd-linux-amd64; rm ~/linkit/contentd-linux-amd64;
+
 build:
-	rm -v bin/contentd-linux-amd64;
 	export GOOS=linux; export GOARCH=amd64; \
         go build -ldflags "-s -w" -o bin/contentd-linux-amd64; \
-	rm ~/linkit/contentd-linux-amd64; \
 	cp  bin/contentd-linux-amd64 ~/linkit
 
 senddev:
