@@ -11,14 +11,39 @@ import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/vostrok/contentd/server/src/metrics"
 	"github.com/vostrok/db"
+	"time"
 )
 
 const ACTIVE_STATUS = 1
 
 var ContentSvc ContentService
+
+var (
+	rpcDuration = prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name: "rpc_duration_ms",
+			Help: "RPC latency",
+		},
+		[]string{"endpoint"},
+	)
+	campaignNotFound = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "campaign_not_found",
+		Help: "Number of requests with campaign not found error",
+	})
+	requestCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "requests_count",
+		Help: "Number of requests get content id by campaign hash",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(rpcDuration)
+	prometheus.MustRegister(campaignNotFound)
+	prometheus.MustRegister(requestCount)
+}
 
 func InitService(sConf ContentServiceConfig, dbConf db.DataBaseConfig, notifConf NotifierConfig) {
 	log.SetLevel(log.DebugLevel)
@@ -62,6 +87,11 @@ type GetUrlByCampaignHashParams struct {
 // 2) reset cache if nothing found
 // 3) record that the content is shown to the user
 func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperties, err error) {
+	requestCount.Inc()
+	begin := time.Now()
+	defer func() {
+		rpcDuration.WithLabelValues("GetUrlByCampaignHash").Observe(time.Since(begin).Seconds() / 1000)
+	}()
 	logCtx := log.WithFields(log.Fields{
 		"msisdn":       p.Msisdn,
 		"campaignHash": p.CampaignHash,
@@ -83,8 +113,7 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	}
 	campaign, ok := campaign.Map[p.CampaignHash]
 	if !ok {
-
-		metrics.M.Counters.CampaignNotFound++
+		campaignNotFound.Inc()
 		err = errors.New("Not found")
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),

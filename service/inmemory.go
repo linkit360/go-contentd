@@ -13,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"database/sql"
-	"github.com/vostrok/contentd/server/src/metrics"
 )
 
 func init() {
@@ -107,15 +106,8 @@ func Reload(c *gin.Context) {
 		}
 	}
 
-	begin := time.Now()
-	defer func() {
-		metrics.M.CQRRequest.Time.CatchOverTime(time.Since(begin), time.Second*time.Duration(10))
-	}()
-	metrics.M.CQRRequest.Count.Add(1)
-
 	success, err := CQR(table)
 	if err != nil {
-		metrics.M.CQRRequest.Errors.Add(1)
 		err := fmt.Errorf("CQR table %s: %s", table, err.Error())
 		r.Status = http.StatusInternalServerError
 		r.Err = err

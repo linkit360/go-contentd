@@ -6,23 +6,21 @@ package src
 // anyway, there is a http method to catch metrics
 import (
 	"net"
+	"net/rpc"
+	"net/rpc/jsonrpc"
 	"runtime"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/gin-gonic/contrib/expvar"
 	"github.com/gin-gonic/gin"
-	"net/rpc"
-	"net/rpc/jsonrpc"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/vostrok/contentd/server/src/config"
 	"github.com/vostrok/contentd/server/src/handlers"
-	"github.com/vostrok/contentd/server/src/metrics"
 	"github.com/vostrok/contentd/service"
 )
 
 func Run() {
 	appConfig := config.LoadConfig()
-	metrics.Init()
 
 	service.InitService(appConfig.Service, appConfig.DbConf, appConfig.Notifier)
 
@@ -39,8 +37,8 @@ func runGin(appConfig config.AppConfig) {
 
 	service.AddCQRHandler(r)
 
-	rg := r.Group("/debug")
-	rg.GET("/vars", expvar.Handler())
+	rg := r.Group("/metrics")
+	rg.GET("", gin.WrapH(prometheus.Handler()))
 
 	r.Run(":" + appConfig.Server.HttpPort)
 	log.WithField("port", appConfig.Server.HttpPort).Info("service port")
