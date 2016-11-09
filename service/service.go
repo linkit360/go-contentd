@@ -62,7 +62,7 @@ type GetUrlByCampaignHashParams struct {
 // 2) reset cache if nothing found
 // 3) record that the content is shown to the user
 func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperties, err error) {
-	calls++
+	calls.Inc()
 	logCtx := log.WithFields(log.Fields{
 		"msisdn":       p.Msisdn,
 		"campaignHash": p.CampaignHash,
@@ -80,13 +80,13 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 			"error":  err.Error(),
 			"params": p,
 		}).Errorf("required params are empty")
-		errs++
+		errs.Inc()
 		return msg, errors.New("Required params not found")
 	}
 	campaign, ok := campaign.Map[p.CampaignHash]
 	if !ok {
-		errs++
-		campaignNotFound++
+		errs.Inc()
+		campaignNotFound.Inc()
 		err = errors.New("Not found")
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
@@ -112,7 +112,7 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("No content avialabale at all")
-		errs++
+		errs.Inc()
 		return msg, err
 	}
 
@@ -174,7 +174,7 @@ findContentId:
 				"retry":     retry,
 				"error":     err.Error(),
 			}).Error("fail")
-			errs++
+			errs.Inc()
 			return msg, err
 		}
 	}
@@ -207,7 +207,7 @@ findContentId:
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Info("notify content sent error")
-		errs++
+		errs.Inc()
 	} else {
 		logCtx.Info("notified")
 	}
