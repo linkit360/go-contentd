@@ -1,3 +1,5 @@
+name: mumbai_contentd
+
 server:
   rpc_port: 50301
   http_port: 50302

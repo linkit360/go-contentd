@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
@@ -18,6 +17,7 @@ type ServerConfig struct {
 	HttpPort string `default:"50302" yaml:"http_port"`
 }
 type AppConfig struct {
+	Name     string                       `yaml:"name"`
 	Server   ServerConfig                 `yaml:"server"`
 	Service  service.ContentServiceConfig `yaml:"service"`
 	DbConf   db.DataBaseConfig            `yaml:"db"`
@@ -35,6 +35,9 @@ func LoadConfig() AppConfig {
 			os.Exit(1)
 		}
 	}
+	if appConfig.Name == "" {
+		log.Fatal("app name must be defiled as <host>-<name>")
+	}
 
 	appConfig.Server.RPCPort = envString("PORT", appConfig.Server.RPCPort)
 	appConfig.Server.HttpPort = envString("METRICS_PORT", appConfig.Server.HttpPort)
@@ -51,22 +54,4 @@ func envString(env, fallback string) string {
 		return fallback
 	}
 	return e
-}
-
-func envInt(env string, fallback int) int {
-	e := os.Getenv(env)
-	d, err := strconv.Atoi(e)
-	if err != nil {
-		return fallback
-	}
-	return d
-}
-
-func envInt64(env string, fallback int64) int64 {
-	e := os.Getenv(env)
-	d, err := strconv.ParseInt(e, 10, 64)
-	if err != nil {
-		return fallback
-	}
-	return d
 }

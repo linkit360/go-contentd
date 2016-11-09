@@ -61,12 +61,21 @@ func Get(req service.GetUrlByCampaignHashParams) (*service.ContentSentProperties
 	}
 redo:
 	if err := contentClient.connection.Call("SVC.GetContentByCampaign", req, &res); err != nil {
-		log.WithField("error", err.Error()).Error("contentd rpc client unavialable")
+		log.WithFields(log.Fields{
+			"tid":    req.Tid,
+			"msg":    err.Error(),
+			"msisdn": req.Msisdn,
+		}).Debug("contentd rpc client now is unavialable")
 		if !redialed {
 			contentClient.dial()
 			redialed = true
 			goto redo
 		}
+		log.WithFields(log.Fields{
+			"tid":    req.Tid,
+			"error":  err.Error(),
+			"msisdn": req.Msisdn,
+		}).Error("redial did't help")
 		return nil, err
 	}
 

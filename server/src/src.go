@@ -12,17 +12,22 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/vostrok/contentd/server/src/config"
 	"github.com/vostrok/contentd/server/src/handlers"
 	"github.com/vostrok/contentd/service"
+	"github.com/vostrok/metrics"
 )
 
 func Run() {
 	appConfig := config.LoadConfig()
 
-	service.InitService(appConfig.Service, appConfig.DbConf, appConfig.Notifier)
+	service.InitService(
+		appConfig.Name,
+		appConfig.Service,
+		appConfig.DbConf,
+		appConfig.Notifier,
+	)
 
 	nuCPU := runtime.NumCPU()
 	runtime.GOMAXPROCS(nuCPU)
@@ -36,9 +41,7 @@ func runGin(appConfig config.AppConfig) {
 	r := gin.New()
 
 	service.AddCQRHandler(r)
-
-	rg := r.Group("/metrics")
-	rg.GET("", gin.WrapH(prometheus.Handler()))
+	metrics.AddHandler(r)
 
 	r.Run(":" + appConfig.Server.HttpPort)
 	log.WithField("port", appConfig.Server.HttpPort).Info("service port")

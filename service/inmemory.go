@@ -49,7 +49,7 @@ func CQR(table string) (bool, error) {
 		log.WithField("error", "table name doesn't match any").Errorf("CQR request")
 		return false, nil
 	}
-	// should we re-build content_service
+
 	switch {
 	case strings.Contains(table, "campaign"):
 		if err := campaign.Reload(); err != nil {

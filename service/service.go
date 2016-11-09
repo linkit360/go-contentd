@@ -11,45 +11,20 @@ import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/vostrok/db"
-	"time"
 )
 
 const ACTIVE_STATUS = 1
 
 var ContentSvc ContentService
 
-var (
-	rpcDuration = prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
-			Name: "rpc_duration_ms",
-			Help: "RPC latency",
-		},
-		[]string{"endpoint"},
-	)
-	campaignNotFound = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "campaign_not_found",
-		Help: "Number of requests with campaign not found error",
-	})
-	requestCount = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "requests_count",
-		Help: "Number of requests get content id by campaign hash",
-	})
-)
-
-func init() {
-	prometheus.MustRegister(rpcDuration)
-	prometheus.MustRegister(campaignNotFound)
-	prometheus.MustRegister(requestCount)
-}
-
-func InitService(sConf ContentServiceConfig, dbConf db.DataBaseConfig, notifConf NotifierConfig) {
+func InitService(appName string, sConf ContentServiceConfig, dbConf db.DataBaseConfig, notifConf NotifierConfig) {
 	log.SetLevel(log.DebugLevel)
 
 	ContentSvc.db = db.Init(dbConf)
 	ContentSvc.dbConf = dbConf
+	initMetrics(appName)
 
 	ContentSvc.sConfig = sConf
 	ContentSvc.notifier = NewNotifierService(notifConf)
@@ -87,11 +62,7 @@ type GetUrlByCampaignHashParams struct {
 // 2) reset cache if nothing found
 // 3) record that the content is shown to the user
 func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperties, err error) {
-	requestCount.Inc()
-	begin := time.Now()
-	defer func() {
-		rpcDuration.WithLabelValues("GetUrlByCampaignHash").Observe(time.Since(begin).Seconds() / 1000)
-	}()
+	calls.Inc()
 	logCtx := log.WithFields(log.Fields{
 		"msisdn":       p.Msisdn,
 		"campaignHash": p.CampaignHash,
@@ -109,10 +80,12 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 			"error":  err.Error(),
 			"params": p,
 		}).Errorf("required params are empty")
+		errs.Inc()
 		return msg, errors.New("Required params not found")
 	}
 	campaign, ok := campaign.Map[p.CampaignHash]
 	if !ok {
+		errs.Inc()
 		campaignNotFound.Inc()
 		err = errors.New("Not found")
 		logCtx.WithFields(log.Fields{
@@ -139,6 +112,7 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("No content avialabale at all")
+		errs.Inc()
 		return msg, err
 	}
 
@@ -200,6 +174,7 @@ findContentId:
 				"retry":     retry,
 				"error":     err.Error(),
 			}).Error("fail")
+			errs.Inc()
 			return msg, err
 		}
 	}
@@ -232,6 +207,7 @@ findContentId:
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Info("notify content sent error")
+		errs.Inc()
 	} else {
 		logCtx.Info("notified")
 	}
