@@ -3,14 +3,17 @@ package rpcclient
 // rpc client for "github.com/vostrok/contentd/server"
 import (
 	"net"
-	"time"
-
 	"net/rpc"
 	"net/rpc/jsonrpc"
+	"time"
 
-	"github.com/vostrok/contentd/server/src/handlers"
+	log "github.com/Sirupsen/logrus"
+	"github.com/felixge/tcpkeepalive"
+
 	"github.com/vostrok/contentd/service"
 )
+
+var contentClient *Client
 
 type Client struct {
 	connection *rpc.Client
@@ -21,29 +24,51 @@ type RPCClientConfig struct {
 	Timeout int    `default:"10" yaml:"timeout"`
 }
 
-func NewClient(dsn string, timeoutSeconds int) (*Client, error) {
-	connection, err := net.DialTimeout("tcp", dsn, time.Duration(timeoutSeconds)*time.Second)
+func Init(contentdClientConf RPCClientConfig) {
+	var err error
+	contentClient = &Client{
+		conf: contentdClientConf,
+	}
+	if err = contentClient.dial(); err != nil {
+		log.WithField("error", err.Error()).Error("contentd rpc client unavialable")
+		return
+	}
+}
+
+func (c *Client) dial() error {
+	if c.connection != nil {
+		_ = c.connection.Close()
+	}
+
+	conn, err := net.DialTimeout("tcp", c.conf.DSN, time.Duration(c.conf.Timeout)*time.Second)
 	if err != nil {
+		return err
+	}
+	kaConn, _ := tcpkeepalive.EnableKeepAlive(conn)
+	kaConn.SetKeepAliveIdle(30 * time.Second)
+	kaConn.SetKeepAliveCount(4)
+	kaConn.SetKeepAliveInterval(5 * time.Second)
+	c.connection = jsonrpc.NewClient(kaConn)
+	return nil
+}
+
+func Get(req service.GetUrlByCampaignHashParams) (*service.ContentSentProperties, error) {
+	var res service.ContentSentProperties
+
+	redialed := false
+	if contentClient.connection == nil {
+		contentClient.dial()
+	}
+redo:
+	if err := contentClient.connection.Call("SVC.GetContentByCampaign", req, &res); err != nil {
+		log.WithField("error", err.Error()).Error("contentd rpc client unavialable")
+		if !redialed {
+			contentClient.dial()
+			redialed = true
+			goto redo
+		}
 		return nil, err
 	}
-	return &Client{
-		connection: jsonrpc.NewClient(connection),
-		conf:       RPCClientConfig{DSN: dsn, Timeout: timeoutSeconds},
-	}, nil
-}
 
-func (c *Client) Get(req service.GetUrlByCampaignHashParams) (*service.ContentSentProperties, error) {
-	var res service.ContentSentProperties
-	err := c.connection.Call("SVC.GetContentByCampaign", req, &res)
-	return &res, err
-}
-
-func (c *Client) CQR(table string) (success bool, err error) {
-
-	req := handlers.CQRRequest{Table: table}
-	res := &handlers.CQRResponse{}
-	if err = c.connection.Call("SVC.CQR", req, res); err != nil {
-		return false, err
-	}
-	return res.Success, err
+	return &res, nil
 }

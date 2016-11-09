@@ -430,6 +430,7 @@ type ContentSentProperties struct {
 	DelayHours     int    `json:"delay_hours"`
 	Publisher      string `json:"publisher"`
 	Pixel          string `json:"pixel"`
+	Error          string `json:"error"`
 }
 
 // Used to get a key of used content ids

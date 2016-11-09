@@ -13,7 +13,8 @@ func (rpc *RPCContentService) GetContentByCampaign(
 
 	*res, err = service.GetUrlByCampaignHash(req)
 	if err != nil {
-		return fmt.Errorf("GetContentByServiceId: %s", err.Error())
+		res.Error = err.Error()
+		err = nil
 	}
 	return nil
 }
