@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
@@ -37,6 +38,9 @@ func LoadConfig() AppConfig {
 	}
 	if appConfig.Name == "" {
 		log.Fatal("app name must be defiled as <host>-<name>")
+	}
+	if strings.Contains(appConfig.Name, "-") {
+		log.Fatal("app name must be without '-' : it's not a valid metric name")
 	}
 
 	appConfig.Server.RPCPort = envString("PORT", appConfig.Server.RPCPort)
