@@ -33,7 +33,7 @@ type EventNotify struct {
 func NewNotifierService(conf NotifierConfig) Notifier {
 	var n Notifier
 	{
-		rabbit := rabbit.NewPublisher(conf.Rbmq, rabbit.InitMetrics("contentd"))
+		rabbit := rabbit.NewPublisher(conf.Rbmq, rabbit.InitPublisherMetrics())
 		n = &notifier{
 			q: queues{
 				contentSent: conf.Queues.ContentSent,

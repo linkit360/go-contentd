@@ -12,20 +12,19 @@ var (
 	errs             m.Gauge
 )
 
-func initMetrics(appName string) {
-	m.Init(appName)
+func initMetrics() {
 
-	campaignNotFound = m.NewCustomMetric(
+	campaignNotFound = m.NewGaugeMetric(
 		"service",
 		"campaign_not_found",
 		"Number of requests with campaign not found error",
 	)
-	calls = m.NewCustomMetric(
+	calls = m.NewGaugeMetric(
 		"service",
 		"call",
 		"Number of GetUrlByCampaignHash calls",
 	)
-	errs = m.NewCustomMetric(
+	errs = m.NewGaugeMetric(
 		"service",
 		"call_errors",
 		"Number of errors inside GetUrlByCampaignHash calls",

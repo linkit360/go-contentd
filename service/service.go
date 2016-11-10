@@ -13,18 +13,26 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/vostrok/db"
+	m "github.com/vostrok/metrics"
 )
 
 const ACTIVE_STATUS = 1
 
 var ContentSvc ContentService
 
-func InitService(appName string, sConf ContentServiceConfig, dbConf db.DataBaseConfig, notifConf NotifierConfig) {
+func InitService(
+	appName string,
+	sConf ContentServiceConfig,
+	dbConf db.DataBaseConfig,
+	notifConf NotifierConfig,
+) {
 	log.SetLevel(log.DebugLevel)
 
 	ContentSvc.db = db.Init(dbConf)
 	ContentSvc.dbConf = dbConf
-	initMetrics(appName)
+	m.Init(appName)
+
+	initMetrics()
 
 	ContentSvc.sConfig = sConf
 	ContentSvc.notifier = NewNotifierService(notifConf)
