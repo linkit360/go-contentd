@@ -157,14 +157,13 @@ func (s *Services) Reload() (err error) {
 	log.WithFields(log.Fields{}).Debug("services reload...")
 	begin := time.Now()
 	defer func(err error) {
-		errStr := ""
-		if err != nil {
-			errStr = err.Error()
+		fields := log.Fields{
+			"took": time.Since(begin),
 		}
-		log.WithFields(log.Fields{
-			"error": errStr,
-			"took":  time.Since(begin),
-		}).Debug("service reload")
+		if err != nil {
+			fields["error"] = err.Error()
+		}
+		log.WithFields(fields).Debug("service reload")
 	}(err)
 
 	query := fmt.Sprintf("SELECT "+
@@ -278,14 +277,13 @@ func (s *Contents) Reload() (err error) {
 	log.WithFields(log.Fields{}).Debug("content reload...")
 	begin := time.Now()
 	defer func(err error) {
-		errStr := ""
-		if err != nil {
-			errStr = err.Error()
+		fields := log.Fields{
+			"took": time.Since(begin),
 		}
-		log.WithFields(log.Fields{
-			"error": errStr,
-			"took":  time.Since(begin),
-		}).Debug("content reload")
+		if err != nil {
+			fields["error"] = err.Error()
+		}
+		log.WithFields(fields).Debug("content reload")
 	}(err)
 
 	query := fmt.Sprintf("select "+
@@ -351,14 +349,13 @@ func (s *Campaigns) Reload() (err error) {
 	log.WithFields(log.Fields{}).Debug("campaign reload...")
 	begin := time.Now()
 	defer func(err error) {
-		errStr := ""
-		if err != nil {
-			errStr = err.Error()
+		fields := log.Fields{
+			"took": time.Since(begin),
 		}
-		log.WithFields(log.Fields{
-			"error": errStr,
-			"took":  time.Since(begin),
-		}).Debug("campaign reload")
+		if err != nil {
+			fields["error"] = err.Error()
+		}
+		log.WithFields(fields).Debug("campaign reload")
 	}(err)
 
 	query := fmt.Sprintf("select id, hash, service_id_1 from %scampaigns where status = $1",
@@ -446,14 +443,13 @@ func (s *SentContents) Reload() (err error) {
 	log.WithFields(log.Fields{}).Debug("content_sent reload...")
 	begin := time.Now()
 	defer func(err error) {
-		errStr := ""
-		if err != nil {
-			errStr = err.Error()
+		fields := log.Fields{
+			"took": time.Since(begin),
 		}
-		log.WithFields(log.Fields{
-			"error": errStr,
-			"took":  time.Since(begin),
-		}).Debug("content_sent reload")
+		if err != nil {
+			fields["error"] = err.Error()
+		}
+		log.WithFields(fields).Debug("content_sent reload")
 	}(err)
 
 	query := fmt.Sprintf("select msisdn, id_service, id_content "+
