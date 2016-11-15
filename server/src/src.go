@@ -1,6 +1,6 @@
 package src
 
-// server has metrics, config, newrelic app
+// server has metrics, config app
 // and handles rpc method to get content url by campaign hash
 // and another method to update cache on demand (CQR)
 // anyway, there is a http method to catch metrics
