@@ -103,7 +103,7 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	}
 
 	serviceId := campaign.ServiceId
-	usedContentIds := contentSent.Get(p.Msisdn, serviceId)
+	usedContentIds := contentSent.Get(p.Tid, p.Msisdn, serviceId)
 	logCtx.WithFields(log.Fields{
 		"tid":            p.Tid,
 		"usedContentIds": usedContentIds,
@@ -151,8 +151,8 @@ findContentId:
 	// reset if nothing
 	if contentId == 0 {
 		logCtx.Debug("No content avialable, reset remembered cache..")
-		contentSent.Clear(p.Msisdn, serviceId)
-		usedContentIds = contentSent.Get(p.Msisdn, serviceId)
+		contentSent.Clear(p.Tid, p.Msisdn, serviceId)
+		usedContentIds = contentSent.Get(p.Tid, p.Msisdn, serviceId)
 		logCtx.WithFields(log.Fields{
 			"usedContentIds": usedContentIds,
 		}).Debug("now used content ids is")
@@ -162,7 +162,7 @@ findContentId:
 		}
 	}
 	// update in-memory cache usedContentIds
-	contentSent.Push(p.Msisdn, serviceId, contentId)
+	contentSent.Push(p.Tid, p.Msisdn, serviceId, contentId)
 
 	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
