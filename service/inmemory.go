@@ -1,9 +1,8 @@
 package service
 
 import (
-	"errors"
+	"database/sql"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,118 +11,45 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	"database/sql"
+	"github.com/vostrok/utils/cqr"
 )
+
+var cqrConf = []cqr.CQRConfig{
+	{
+		Table:      "campaigns",
+		ReloadFunc: campaign.Reload,
+	},
+	{
+		Table:      "service",
+		ReloadFunc: service.Reload,
+	},
+	{
+		Table:      "content",
+		ReloadFunc: content.Reload,
+	},
+	{
+		Table:      "content_sent",
+		ReloadFunc: contentSent.Reload,
+	},
+}
 
 func init() {
 	log.SetLevel(log.DebugLevel)
 }
 
 func initCQR() error {
-	if err := campaign.Reload(); err != nil {
-		return fmt.Errorf("campaign.Reload: %s", err.Error())
-	}
-	if err := service.Reload(); err != nil {
-		return fmt.Errorf("service.Reload: %s", err.Error())
-	}
-	if err := content.Reload(); err != nil {
-		return fmt.Errorf("content.Reload: %s", err.Error())
-	}
-	if err := contentSent.Reload(); err != nil {
-		return fmt.Errorf("sentContent.Reload: %s", err.Error())
-	}
-	ContentSvc.tables = make(map[string]struct{}, len(ContentSvc.sConfig.Tables))
-	for _, v := range ContentSvc.sConfig.Tables {
-		ContentSvc.tables[v] = struct{}{}
-	}
-	return nil
+	return cqr.InitCQR(cqrConf)
 }
 
-func CQR(table string) (bool, error) {
-	if len(table) == 0 {
-		log.WithField("error", "No table name given").Errorf("CQR request")
-		return false, nil
-	}
-	_, ok := ContentSvc.tables[table]
-	if !ok {
-		log.WithField("error", "table name doesn't match any").Errorf("CQR request")
-		return false, nil
-	}
-
-	switch {
-	case strings.Contains(table, "campaign"):
-		if err := campaign.Reload(); err != nil {
-			return false, fmt.Errorf("campaign.Reload: %s", err.Error())
-		}
-	case strings.Contains(table, "service"):
-		if err := service.Reload(); err != nil {
-			return false, fmt.Errorf("service.Reload: %s", err.Error())
-		}
-	case strings.Contains(table, "content"):
-		if err := content.Reload(); err != nil {
-			return false, fmt.Errorf("content.Reload: %s", err.Error())
-		}
-	case strings.Contains(table, "service_content"):
-		if err := service.Reload(); err != nil {
-			return false, fmt.Errorf("service_content: service.Reload: %s", err.Error())
-		}
-	case strings.Contains(table, "content_sent"):
-		if err := contentSent.Reload(); err != nil {
-			return false, fmt.Errorf("sentContent.Reload: %s", err.Error())
-		}
-	default:
-		return false, fmt.Errorf("CQR Request: Unknown table: %s", table)
-	}
-
-	return true, nil
+func AddCQRHandlers(r *gin.Engine) {
+	cqr.AddCQRHandler(reloadCQRFunc, r)
 }
-
-func AddCQRHandler(r *gin.Engine) {
-	rg := r.Group("/cqr")
-	rg.GET("", Reload)
-}
-
-type response struct {
-	Success bool        `json:"success,omitempty"`
-	Err     error       `json:"error,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	Status  int         `json:"-"`
-}
-
-func Reload(c *gin.Context) {
-	var err error
-	r := response{Err: err, Status: http.StatusOK}
-
-	table, exists := c.GetQuery("table")
-	if !exists || table == "" {
-		table, exists = c.GetQuery("t")
-		if !exists || table == "" {
-			err := errors.New("Table name required")
-			r.Status = http.StatusBadRequest
-			r.Err = err
-			render(r, c)
-			return
-		}
-	}
-
-	success, err := CQR(table)
-	if err != nil {
-		err := fmt.Errorf("CQR table %s: %s", table, err.Error())
-		r.Status = http.StatusInternalServerError
-		r.Err = err
-		render(r, c)
-	}
-	r.Success = success
-	render(r, c)
-	return
-}
-
-func render(msg response, c *gin.Context) {
-	if msg.Err != nil {
-		c.Header("Error", msg.Err.Error())
-		c.Error(msg.Err)
-	}
-	c.JSON(msg.Status, msg)
+func reloadCQRFunc(c *gin.Context) {
+	conf := append(cqrConf, cqr.CQRConfig{
+		Table:      "service_content",
+		ReloadFunc: service.Reload,
+	})
+	cqr.CQRReloadFunc(conf, c)(c)
 }
 
 // Tasks:
