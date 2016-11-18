@@ -12,8 +12,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/vostrok/db"
-	m "github.com/vostrok/metrics"
+	"github.com/vostrok/utils/db"
+	m "github.com/vostrok/utils/metrics"
 )
 
 const ACTIVE_STATUS = 1

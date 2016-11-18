@@ -10,7 +10,7 @@ import (
 	"github.com/jinzhu/configor"
 
 	"github.com/vostrok/contentd/service"
-	"github.com/vostrok/db"
+	"github.com/vostrok/utils/db"
 )
 
 type ServerConfig struct {

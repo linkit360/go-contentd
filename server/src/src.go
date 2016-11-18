@@ -16,7 +16,7 @@ import (
 	"github.com/vostrok/contentd/server/src/config"
 	"github.com/vostrok/contentd/server/src/handlers"
 	"github.com/vostrok/contentd/service"
-	"github.com/vostrok/metrics"
+	"github.com/vostrok/utils/metrics"
 )
 
 func Run() {
