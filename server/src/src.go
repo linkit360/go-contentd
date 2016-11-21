@@ -25,6 +25,7 @@ func Run() {
 	service.InitService(
 		appConfig.Name,
 		appConfig.Service,
+		appConfig.InMemConfig,
 		appConfig.DbConf,
 		appConfig.Notifier,
 	)
@@ -39,8 +40,6 @@ func Run() {
 
 func runGin(appConfig config.AppConfig) {
 	r := gin.New()
-
-	service.AddCQRHandlers(r)
 	metrics.AddHandler(r)
 
 	r.Run(":" + appConfig.Server.HttpPort)

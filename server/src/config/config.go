@@ -10,6 +10,7 @@ import (
 	"github.com/jinzhu/configor"
 
 	"github.com/vostrok/contentd/service"
+	inmem "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/utils/db"
 )
 
@@ -18,11 +19,12 @@ type ServerConfig struct {
 	HttpPort string `default:"50302" yaml:"http_port"`
 }
 type AppConfig struct {
-	Name     string                       `yaml:"name"`
-	Server   ServerConfig                 `yaml:"server"`
-	Service  service.ContentServiceConfig `yaml:"service"`
-	DbConf   db.DataBaseConfig            `yaml:"db"`
-	Notifier service.NotifierConfig       `yaml:"notifier"`
+	Name        string                       `yaml:"name"`
+	Server      ServerConfig                 `yaml:"server"`
+	Service     service.ContentServiceConfig `yaml:"service"`
+	InMemConfig inmem.RPCClientConfig        `yaml:"inmem"`
+	DbConf      db.DataBaseConfig            `yaml:"db"`
+	Notifier    service.NotifierConfig       `yaml:"notifier"`
 }
 
 func LoadConfig() AppConfig {

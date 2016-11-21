@@ -9,24 +9,54 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 
 	log "github.com/Sirupsen/logrus"
 
+	inmem "github.com/vostrok/inmem/rpcclient"
+	"github.com/vostrok/utils/cqr"
 	"github.com/vostrok/utils/db"
 	m "github.com/vostrok/utils/metrics"
 )
 
-const ACTIVE_STATUS = 1
-
 var ContentSvc ContentService
+
+type ContentSentProperties struct {
+	Msisdn         string `json:"msisdn"`
+	Tid            string `json:"tid"`
+	Price          int    `json:"price"`
+	ContentPath    string `json:"content_path"`
+	ContentName    string `json:"content_name"`
+	CapmaignHash   string `json:"capmaign_hash"`
+	CampaignId     int64  `json:"campaign_id"`
+	ContentId      int64  `json:"content_id"`
+	ServiceId      int64  `json:"service_id"`
+	SubscriptionId int64  `json:"subscription_id"`
+	CountryCode    int64  `json:"country_code"`
+	OperatorCode   int64  `json:"operator_code"`
+	PaidHours      int    `json:"paid_hours"`
+	DelayHours     int    `json:"delay_hours"`
+	Publisher      string `json:"publisher"`
+	Pixel          string `json:"pixel"`
+	Error          string `json:"error"`
+}
+
+// Used to get a key of used content ids
+// when key == msisdn, then uniq content exactly
+// when key == msisdn + service+id, then unique content per sevice
+func (t ContentSentProperties) key() string {
+	return t.Msisdn + "-" + strconv.FormatInt(t.ServiceId, 10)
+}
 
 func InitService(
 	appName string,
 	sConf ContentServiceConfig,
+	inMemConfig inmem.RPCClientConfig,
 	dbConf db.DataBaseConfig,
 	notifConf NotifierConfig,
 ) {
 	log.SetLevel(log.DebugLevel)
+	inmem.Init(inMemConfig)
 
 	ContentSvc.db = db.Init(dbConf)
 	ContentSvc.dbConf = dbConf
@@ -36,18 +66,18 @@ func InitService(
 
 	ContentSvc.sConfig = sConf
 	ContentSvc.notifier = NewNotifierService(notifConf)
-	if err := initCQR(); err != nil {
-		log.WithField("error", err.Error()).Fatal("Init CQR")
-	}
+
+	log.Debug()
 }
 
 type ContentService struct {
-	db       *sql.DB
-	dbConf   db.DataBaseConfig
-	sConfig  ContentServiceConfig
-	notifier Notifier
-	tables   map[string]struct{}
+	db        *sql.DB
+	dbConf    db.DataBaseConfig
+	sConfig   ContentServiceConfig
+	notifier  Notifier
+	cqrConfig []*cqr.CQRConfig
 }
+
 type ContentServiceConfig struct {
 	SubscriptionsLoadDays int      `default:"10" yaml:"subscriptions_load_days"`
 	SearchRetryCount      int      `default:"10" yaml:"retry_count"`
@@ -91,41 +121,61 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 		errs.Inc()
 		return msg, errors.New("Required params not found")
 	}
-	campaign, ok := campaign.Map[p.CampaignHash]
-	if !ok {
+	campaign, err := inmem.GetCampaignByHash(p.CampaignHash)
+	if err != nil {
 		errs.Inc()
 		campaignNotFound.Inc()
-		err = errors.New("Not found")
+		err = fmt.Errorf("inmem.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("couldn't get campaign by campaign hash")
-		return msg, fmt.Errorf("CampaignHash: %s", "Not found")
+		return msg, err
 	}
 
 	serviceId := campaign.ServiceId
-	usedContentIds := contentSent.Get(p.Tid, p.Msisdn, serviceId)
+
+	usedContentIds, err := inmem.SentContentGet(p.Msisdn, serviceId)
+	if err != nil {
+		errs.Inc()
+		//campaignNotFound.Inc()
+		err = fmt.Errorf("inmem.Call: %s", err.Error())
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Errorf("couldn't get used content ids")
+		return msg, err
+	}
 	logCtx.WithFields(log.Fields{
 		"tid":            p.Tid,
 		"usedContentIds": usedContentIds,
 		"serviceId":      serviceId,
 	}).Debug("got used content ids")
 
-	avialableContentIds := service.Get(serviceId)
+	svc, err := inmem.GetServiceById(serviceId)
+	if err != nil {
+		errs.Inc()
+		// todo: insert specific metric
+
+		err = fmt.Errorf("inmem.Call: %s", err.Error())
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Errorf("couldn't get service by id")
+		return msg, err
+	}
+	avialableContentIds := svc.ContentIds
 	logCtx.WithFields(log.Fields{
 		"avialableContentIds": avialableContentIds,
 	}).Debug("got avialable content ids")
 
 	if len(avialableContentIds) == 0 {
+		errs.Inc()
+		// todo: insert specific metric
+
 		err = fmt.Errorf("No content for campaign %s at all", p.CampaignHash)
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("No content avialabale at all")
-		errs.Inc()
 		return msg, err
 	}
-
-	// todo: platform compatibility check
-	// todo: subcategory check
 
 	retry := 0
 findContentId:
@@ -151,8 +201,18 @@ findContentId:
 	// reset if nothing
 	if contentId == 0 {
 		logCtx.Debug("No content avialable, reset remembered cache..")
-		contentSent.Clear(p.Tid, p.Msisdn, serviceId)
-		usedContentIds = contentSent.Get(p.Tid, p.Msisdn, serviceId)
+		inmem.SentContentClear(p.Msisdn, serviceId)
+		usedContentIds, err := inmem.SentContentGet(p.Msisdn, serviceId)
+		if err != nil {
+			errs.Inc()
+			// todo: insert specific metric
+
+			err = fmt.Errorf("inmem.Call: %s", err.Error())
+			logCtx.WithFields(log.Fields{
+				"error": err.Error(),
+			}).Errorf("couldn't get used content ids")
+			return msg, err
+		}
 		logCtx.WithFields(log.Fields{
 			"usedContentIds": usedContentIds,
 		}).Debug("now used content ids is")
@@ -162,12 +222,12 @@ findContentId:
 		}
 	}
 	// update in-memory cache usedContentIds
-	contentSent.Push(p.Tid, p.Msisdn, serviceId, contentId)
+	inmem.SentContentPush(p.Msisdn, serviceId, contentId)
 
 	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
-	contentInfo, ok := content.Map[contentId]
-	if !ok {
+	contentInfo, err := inmem.GetContentById(contentId)
+	if err != nil {
 		if retry < ContentSvc.sConfig.SearchRetryCount {
 			retry++
 			logCtx.WithFields(log.Fields{
@@ -191,10 +251,9 @@ findContentId:
 	// and, as we got this variables during "get path" process
 	// we save them into database, not to get them again
 	// anyway, it is possible to find a better way in future
-	srv := service.Map[serviceId]
 	msg = ContentSentProperties{
 		Msisdn:       p.Msisdn,
-		Price:        int(srv.Price),
+		Price:        int(svc.Price),
 		Tid:          p.Tid,
 		ContentPath:  contentInfo.Path,
 		ContentName:  contentInfo.Name,
@@ -204,8 +263,8 @@ findContentId:
 		ServiceId:    serviceId,
 		CountryCode:  p.CountryCode,
 		OperatorCode: p.OperatorCode,
-		PaidHours:    srv.PaidHours,
-		DelayHours:   srv.DelayHours,
+		PaidHours:    svc.PaidHours,
+		DelayHours:   svc.DelayHours,
 		Publisher:    p.Publisher,
 		Pixel:        p.Pixel,
 	}
