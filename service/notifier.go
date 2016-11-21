@@ -15,14 +15,14 @@ type NotifierConfig struct {
 	Queues struct {
 		ContentSent string `yaml:"content_sent"`
 	} `yaml:"queues"`
-	Rbmq rabbit.NotifierConfig `yaml:"rbmq"`
+	Rbmq amqp.NotifierConfig `yaml:"rbmq"`
 }
 type queues struct {
 	contentSent string
 }
 type notifier struct {
 	q  queues
-	mq *rabbit.Notifier
+	mq *amqp.Notifier
 }
 
 type EventNotify struct {
@@ -33,7 +33,7 @@ type EventNotify struct {
 func NewNotifierService(conf NotifierConfig) Notifier {
 	var n Notifier
 	{
-		rabbit := rabbit.NewNotifier(conf.Rbmq)
+		rabbit := amqp.NewNotifier(conf.Rbmq)
 		n = &notifier{
 			q: queues{
 				contentSent: conf.Queues.ContentSent,
@@ -56,6 +56,6 @@ func (service notifier) ContentSentNotify(msg ContentSentProperties) error {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
 
-	service.mq.Publish(rabbit.AMQPMessage{service.q.contentSent, body})
+	service.mq.Publish(amqp.AMQPMessage{service.q.contentSent, body})
 	return nil
 }
