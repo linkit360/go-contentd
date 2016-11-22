@@ -4,6 +4,10 @@ server:
   rpc_port: 50301
   http_port: 50302
 
+inmem_client:
+  dsn: localhost:50307
+  timeout: 10
+
 service:
   retry_count: 10
   subscriptions_load_days: 5

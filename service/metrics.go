@@ -5,13 +5,14 @@ import (
 )
 
 var (
-	campaignNotFound m.Gauge
-	calls            m.Gauge
-	errs             m.Gauge
+	calls  m.Gauge
+	errs   m.Gauge
+	rpcErr m.Gauge
 )
 
 func initMetrics() {
-	campaignNotFound = m.NewGauge("", "service", "campaign_not_found", "Number of requests with campaign not found error")
-	calls = m.NewGauge("", "service", "call", "Number of GetUrlByCampaignHash calls")
-	errs = m.NewGauge("", "service", "call_errors", "Number of errors inside GetUrlByCampaignHash calls")
+	calls = m.NewGauge("", "service", "call", "Number of calls")
+	errs = m.NewGauge("", "service", "call_errors", "Number of errors in calls")
+
+	rpcErr = m.NewGauge("rpc", "inmem", "errors", "Number of RPC call errors (inmem)")
 }

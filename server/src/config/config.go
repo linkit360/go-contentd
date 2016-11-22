@@ -22,7 +22,7 @@ type AppConfig struct {
 	Name        string                       `yaml:"name"`
 	Server      ServerConfig                 `yaml:"server"`
 	Service     service.ContentServiceConfig `yaml:"service"`
-	InMemConfig inmem.RPCClientConfig        `yaml:"inmem"`
+	InMemConfig inmem.RPCClientConfig        `yaml:"inmem_client"`
 	DbConf      db.DataBaseConfig            `yaml:"db"`
 	Notifier    service.NotifierConfig       `yaml:"notifier"`
 }

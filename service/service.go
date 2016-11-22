@@ -124,7 +124,8 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	campaign, err := inmem.GetCampaignByHash(p.CampaignHash)
 	if err != nil {
 		errs.Inc()
-		campaignNotFound.Inc()
+		rpcErr.Inc()
+
 		err = fmt.Errorf("inmem.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
@@ -137,7 +138,8 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	usedContentIds, err := inmem.SentContentGet(p.Msisdn, serviceId)
 	if err != nil {
 		errs.Inc()
-		//campaignNotFound.Inc()
+		rpcErr.Inc()
+
 		err = fmt.Errorf("inmem.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
@@ -153,7 +155,7 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	svc, err := inmem.GetServiceById(serviceId)
 	if err != nil {
 		errs.Inc()
-		// todo: insert specific metric
+		rpcErr.Inc()
 
 		err = fmt.Errorf("inmem.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
@@ -168,7 +170,6 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 
 	if len(avialableContentIds) == 0 {
 		errs.Inc()
-		// todo: insert specific metric
 
 		err = fmt.Errorf("No content for campaign %s at all", p.CampaignHash)
 		logCtx.WithFields(log.Fields{
@@ -201,11 +202,20 @@ findContentId:
 	// reset if nothing
 	if contentId == 0 {
 		logCtx.Debug("No content avialable, reset remembered cache..")
-		inmem.SentContentClear(p.Msisdn, serviceId)
+		if err = inmem.SentContentClear(p.Msisdn, serviceId); err != nil {
+			errs.Inc()
+			rpcErr.Inc()
+
+			err = fmt.Errorf("inmem.Call: %s", err.Error())
+			logCtx.WithFields(log.Fields{
+				"error": err.Error(),
+			}).Debug("cannot clear sent content")
+			return msg, err
+		}
 		usedContentIds, err := inmem.SentContentGet(p.Msisdn, serviceId)
 		if err != nil {
 			errs.Inc()
-			// todo: insert specific metric
+			rpcErr.Inc()
 
 			err = fmt.Errorf("inmem.Call: %s", err.Error())
 			logCtx.WithFields(log.Fields{
@@ -222,7 +232,16 @@ findContentId:
 		}
 	}
 	// update in-memory cache usedContentIds
-	inmem.SentContentPush(p.Msisdn, serviceId, contentId)
+	if err = inmem.SentContentPush(p.Msisdn, serviceId, contentId); err != nil {
+		errs.Inc()
+		rpcErr.Inc()
+
+		err = fmt.Errorf("inmem.Call: %s", err.Error())
+		logCtx.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Debug("cannot push sent content")
+		return msg, err
+	}
 
 	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
