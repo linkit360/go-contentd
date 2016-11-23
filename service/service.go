@@ -24,23 +24,23 @@ var callsSuccess m.Gauge
 var errs m.Gauge
 
 type ContentSentProperties struct {
-	Msisdn         string `json:"msisdn"`
-	Tid            string `json:"tid"`
-	Price          int    `json:"price"`
-	ContentPath    string `json:"content_path"`
-	ContentName    string `json:"content_name"`
-	CapmaignHash   string `json:"capmaign_hash"`
-	CampaignId     int64  `json:"campaign_id"`
-	ContentId      int64  `json:"content_id"`
-	ServiceId      int64  `json:"service_id"`
-	SubscriptionId int64  `json:"subscription_id"`
-	CountryCode    int64  `json:"country_code"`
-	OperatorCode   int64  `json:"operator_code"`
-	PaidHours      int    `json:"paid_hours"`
-	DelayHours     int    `json:"delay_hours"`
-	Publisher      string `json:"publisher"`
-	Pixel          string `json:"pixel"`
-	Error          string `json:"error"`
+	Msisdn         string `json:"msisdn,omitempty"`
+	Tid            string `json:"tid,omitempty"`
+	Price          int    `json:"price,omitempty"`
+	ContentPath    string `json:"content_path,omitempty"`
+	ContentName    string `json:"content_name,omitempty"`
+	CapmaignHash   string `json:"capmaign_hash,omitempty"`
+	CampaignId     int64  `json:"campaign_id,omitempty"`
+	ContentId      int64  `json:"content_id,omitempty"`
+	ServiceId      int64  `json:"service_id,omitempty"`
+	SubscriptionId int64  `json:"subscription_id,omitempty"`
+	CountryCode    int64  `json:"country_code,omitempty"`
+	OperatorCode   int64  `json:"operator_code,omitempty"`
+	PaidHours      int    `json:"paid_hours,omitempty"`
+	DelayHours     int    `json:"delay_hours,omitempty"`
+	Publisher      string `json:"publisher,omitempty"`
+	Pixel          string `json:"pixel,omitempty"`
+	Error          string `json:"error,omitempty"`
 }
 
 // Used to get a key of used content ids
