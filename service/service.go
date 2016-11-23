@@ -20,6 +20,8 @@ import (
 )
 
 var ContentSvc ContentService
+var callsSuccess m.Gauge
+var errs m.Gauge
 
 type ContentSentProperties struct {
 	Msisdn         string `json:"msisdn"`
@@ -55,14 +57,13 @@ func InitService(
 	dbConf db.DataBaseConfig,
 	notifConf NotifierConfig,
 ) {
+	initMetrics(appName)
+
 	log.SetLevel(log.DebugLevel)
 	inmem.Init(inMemConfig)
 
 	ContentSvc.db = db.Init(dbConf)
 	ContentSvc.dbConf = dbConf
-	m.Init(appName)
-
-	initMetrics()
 
 	ContentSvc.sConfig = sConf
 	ContentSvc.notifier = NewNotifierService(notifConf)
@@ -100,7 +101,6 @@ type GetUrlByCampaignHashParams struct {
 // 2) reset cache if nothing found
 // 3) record that the content is shown to the user
 func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperties, err error) {
-	calls.Inc()
 	logCtx := log.WithFields(log.Fields{
 		"msisdn":       p.Msisdn,
 		"campaignHash": p.CampaignHash,
@@ -113,18 +113,19 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 		p.CountryCode == 0 ||
 		p.OperatorCode == 0 ||
 		p.Tid == "" {
+		errs.Inc()
+
 		err = errors.New("Empty required params")
 		logCtx.WithFields(log.Fields{
 			"error":  err.Error(),
 			"params": p,
 		}).Errorf("required params are empty")
-		errs.Inc()
+
 		return msg, errors.New("Required params not found")
 	}
 	campaign, err := inmem.GetCampaignByHash(p.CampaignHash)
 	if err != nil {
 		errs.Inc()
-		rpcErr.Inc()
 
 		err = fmt.Errorf("inmem.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
@@ -138,7 +139,6 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	usedContentIds, err := inmem.SentContentGet(p.Msisdn, serviceId)
 	if err != nil {
 		errs.Inc()
-		rpcErr.Inc()
 
 		err = fmt.Errorf("inmem.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
@@ -155,7 +155,6 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 	svc, err := inmem.GetServiceById(serviceId)
 	if err != nil {
 		errs.Inc()
-		rpcErr.Inc()
 
 		err = fmt.Errorf("inmem.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
@@ -204,7 +203,6 @@ findContentId:
 		logCtx.Debug("No content avialable, reset remembered cache..")
 		if err = inmem.SentContentClear(p.Msisdn, serviceId); err != nil {
 			errs.Inc()
-			rpcErr.Inc()
 
 			err = fmt.Errorf("inmem.Call: %s", err.Error())
 			logCtx.WithFields(log.Fields{
@@ -215,7 +213,6 @@ findContentId:
 		usedContentIds, err := inmem.SentContentGet(p.Msisdn, serviceId)
 		if err != nil {
 			errs.Inc()
-			rpcErr.Inc()
 
 			err = fmt.Errorf("inmem.Call: %s", err.Error())
 			logCtx.WithFields(log.Fields{
@@ -234,8 +231,6 @@ findContentId:
 	// update in-memory cache usedContentIds
 	if err = inmem.SentContentPush(p.Msisdn, serviceId, contentId); err != nil {
 		errs.Inc()
-		rpcErr.Inc()
-
 		err = fmt.Errorf("inmem.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
@@ -255,13 +250,14 @@ findContentId:
 			}).Error("contentId not found in content")
 			goto findContentId
 		} else {
+			errs.Inc()
+
 			err = fmt.Errorf("Failed to find valid contentId: campaign: %s, msisdn: %s", p.CampaignHash, p.Msisdn)
 			logCtx.WithFields(log.Fields{
 				"contentId": contentId,
 				"retry":     retry,
 				"error":     err.Error(),
 			}).Error("fail")
-			errs.Inc()
 			return msg, err
 		}
 	}
@@ -290,13 +286,21 @@ findContentId:
 
 	// record sent content
 	if err = ContentSvc.notifier.ContentSentNotify(msg); err != nil {
+		errs.Inc()
+
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Info("notify content sent error")
-		errs.Inc()
 	} else {
 		logCtx.Info("notified")
 	}
 	logCtx.WithFields(log.Fields{"contentSentProperties": fmt.Sprintf("%#v", msg)}).Info("success")
+	callsSuccess.Inc()
 	return msg, nil
+}
+
+func initMetrics(name string) {
+	m.Init(name)
+	callsSuccess = m.NewGauge("", "", "success", "success overall")
+	errs = m.NewGauge("", "", "errors", "errors overall")
 }
