@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -24,23 +25,24 @@ var callsSuccess m.Gauge
 var errs m.Gauge
 
 type ContentSentProperties struct {
-	Msisdn         string `json:"msisdn,omitempty"`
-	Tid            string `json:"tid,omitempty"`
-	Price          int    `json:"price,omitempty"`
-	ContentPath    string `json:"content_path,omitempty"`
-	ContentName    string `json:"content_name,omitempty"`
-	CapmaignHash   string `json:"capmaign_hash,omitempty"`
-	CampaignId     int64  `json:"campaign_id,omitempty"`
-	ContentId      int64  `json:"content_id,omitempty"`
-	ServiceId      int64  `json:"service_id,omitempty"`
-	SubscriptionId int64  `json:"subscription_id,omitempty"`
-	CountryCode    int64  `json:"country_code,omitempty"`
-	OperatorCode   int64  `json:"operator_code,omitempty"`
-	PaidHours      int    `json:"paid_hours,omitempty"`
-	DelayHours     int    `json:"delay_hours,omitempty"`
-	Publisher      string `json:"publisher,omitempty"`
-	Pixel          string `json:"pixel,omitempty"`
-	Error          string `json:"error,omitempty"`
+	SentAt         time.Time `json:"sent_at,omitempty"`
+	Msisdn         string    `json:"msisdn,omitempty"`
+	Tid            string    `json:"tid,omitempty"`
+	Price          int       `json:"price,omitempty"`
+	ContentPath    string    `json:"content_path,omitempty"`
+	ContentName    string    `json:"content_name,omitempty"`
+	CapmaignHash   string    `json:"capmaign_hash,omitempty"`
+	CampaignId     int64     `json:"campaign_id,omitempty"`
+	ContentId      int64     `json:"content_id,omitempty"`
+	ServiceId      int64     `json:"service_id,omitempty"`
+	SubscriptionId int64     `json:"subscription_id,omitempty"`
+	CountryCode    int64     `json:"country_code,omitempty"`
+	OperatorCode   int64     `json:"operator_code,omitempty"`
+	PaidHours      int       `json:"paid_hours,omitempty"`
+	DelayHours     int       `json:"delay_hours,omitempty"`
+	Publisher      string    `json:"publisher,omitempty"`
+	Pixel          string    `json:"pixel,omitempty"`
+	Error          string    `json:"error,omitempty"`
 }
 
 // Used to get a key of used content ids

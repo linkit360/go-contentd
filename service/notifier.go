@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/vostrok/utils/amqp"
 )
@@ -45,7 +46,7 @@ func NewNotifierService(conf NotifierConfig) Notifier {
 }
 
 func (service notifier) ContentSentNotify(msg ContentSentProperties) error {
-
+	msg.SentAt = time.Now().UTC()
 	event := EventNotify{
 		EventName: "content_sent",
 		EventData: msg,
@@ -56,6 +57,6 @@ func (service notifier) ContentSentNotify(msg ContentSentProperties) error {
 		return fmt.Errorf("json.Marshal: %s", err.Error())
 	}
 
-	service.mq.Publish(amqp.AMQPMessage{service.q.contentSent, body})
+	service.mq.Publish(amqp.AMQPMessage{service.q.contentSent, 0, body})
 	return nil
 }
