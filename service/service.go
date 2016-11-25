@@ -6,7 +6,6 @@
 package service
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 
 	inmem "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/utils/cqr"
-	"github.com/vostrok/utils/db"
 	m "github.com/vostrok/utils/metrics"
 )
 
@@ -56,16 +54,12 @@ func InitService(
 	appName string,
 	sConf ContentServiceConfig,
 	inMemConfig inmem.RPCClientConfig,
-	dbConf db.DataBaseConfig,
 	notifConf NotifierConfig,
 ) {
 	initMetrics(appName)
 
 	log.SetLevel(log.DebugLevel)
 	inmem.Init(inMemConfig)
-
-	ContentSvc.db = db.Init(dbConf)
-	ContentSvc.dbConf = dbConf
 
 	ContentSvc.sConfig = sConf
 	ContentSvc.notifier = NewNotifierService(notifConf)
@@ -74,18 +68,13 @@ func InitService(
 }
 
 type ContentService struct {
-	db        *sql.DB
-	dbConf    db.DataBaseConfig
 	sConfig   ContentServiceConfig
 	notifier  Notifier
 	cqrConfig []*cqr.CQRConfig
 }
 
 type ContentServiceConfig struct {
-	SubscriptionsLoadDays int      `default:"10" yaml:"subscriptions_load_days"`
-	SearchRetryCount      int      `default:"10" yaml:"retry_count"`
-	UniqDays              int      `default:"10" yaml:"uniq_days"` // content would be uniq in these days
-	Tables                []string `yaml:"tables"`
+	SearchRetryCount int `default:"10" yaml:"retry_count"`
 }
 
 type GetUrlByCampaignHashParams struct {
@@ -305,4 +294,11 @@ func initMetrics(name string) {
 	m.Init(name)
 	callsSuccess = m.NewGauge("", "", "success", "success overall")
 	errs = m.NewGauge("", "", "errors", "errors overall")
+
+	go func() {
+		for range time.Tick(time.Minute) {
+			callsSuccess.Update()
+			errs.Update()
+		}
+	}()
 }

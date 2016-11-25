@@ -26,7 +26,6 @@ func Run() {
 		appConfig.Name,
 		appConfig.Service,
 		appConfig.InMemConfig,
-		appConfig.DbConf,
 		appConfig.Notifier,
 	)
 

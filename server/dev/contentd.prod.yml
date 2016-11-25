@@ -6,26 +6,6 @@ server:
 
 service:
   retry_count: 10
-  subscriptions_load_days: 5
-  uniq_days: 10
-  tables:
-  - campaign
-  - service
-  - content
-  - service_content
-  - content_sent
-
-db:
-  conn_ttl: -1
-  max_conns: 15
-  timeout: 30
-  name: linkit_mobilink
-  user: linkit_mobilink
-  pass: A0kZN8pUAs63wePezz
-  port: 5432
-  host: linkit-mobilink.cb2q7f7mvbwr.ap-south-1.rds.amazonaws.com
-  ssl_mode: disable
-  table_prefix: xmp_
 
 notifier:
   queues:

@@ -11,7 +11,6 @@ import (
 
 	"github.com/vostrok/contentd/service"
 	inmem "github.com/vostrok/inmem/rpcclient"
-	"github.com/vostrok/utils/db"
 )
 
 type ServerConfig struct {
@@ -23,7 +22,6 @@ type AppConfig struct {
 	Server      ServerConfig                 `yaml:"server"`
 	Service     service.ContentServiceConfig `yaml:"service"`
 	InMemConfig inmem.RPCClientConfig        `yaml:"inmem_client"`
-	DbConf      db.DataBaseConfig            `yaml:"db"`
 	Notifier    service.NotifierConfig       `yaml:"notifier"`
 }
 
