@@ -13,7 +13,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	inmem "github.com/vostrok/inmem/rpcclient"
+	inmem_client "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/utils/cqr"
 	m "github.com/vostrok/utils/metrics"
 )
@@ -41,6 +41,7 @@ type ContentSentProperties struct {
 	Publisher      string    `json:"publisher,omitempty"`
 	Pixel          string    `json:"pixel,omitempty"`
 	Error          string    `json:"error,omitempty"`
+	Type           string    `json:"type,omitempty"`
 }
 
 // Used to get a key of used content ids
@@ -53,13 +54,13 @@ func (t ContentSentProperties) key() string {
 func InitService(
 	appName string,
 	sConf ContentServiceConfig,
-	inMemConfig inmem.RPCClientConfig,
+	inMemConfig inmem_client.RPCClientConfig,
 	notifConf NotifierConfig,
 ) {
 	initMetrics(appName)
 
 	log.SetLevel(log.DebugLevel)
-	inmem.Init(inMemConfig)
+	inmem_client.Init(inMemConfig)
 
 	ContentSvc.sConfig = sConf
 	ContentSvc.notifier = NewNotifierService(notifConf)
@@ -114,11 +115,11 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 
 		return msg, errors.New("Required params not found")
 	}
-	campaign, err := inmem.GetCampaignByHash(p.CampaignHash)
+	campaign, err := inmem_client.GetCampaignByHash(p.CampaignHash)
 	if err != nil {
 		errs.Inc()
 
-		err = fmt.Errorf("inmem.Call: %s", err.Error())
+		err = fmt.Errorf("inmem_client.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("couldn't get campaign by campaign hash")
@@ -127,11 +128,11 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 
 	serviceId := campaign.ServiceId
 
-	usedContentIds, err := inmem.SentContentGet(p.Msisdn, serviceId)
+	usedContentIds, err := inmem_client.SentContentGet(p.Msisdn, serviceId)
 	if err != nil {
 		errs.Inc()
 
-		err = fmt.Errorf("inmem.Call: %s", err.Error())
+		err = fmt.Errorf("inmem_client.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("couldn't get used content ids")
@@ -143,11 +144,11 @@ func GetUrlByCampaignHash(p GetUrlByCampaignHashParams) (msg ContentSentProperti
 		"serviceId":      serviceId,
 	}).Debug("got used content ids")
 
-	svc, err := inmem.GetServiceById(serviceId)
+	svc, err := inmem_client.GetServiceById(serviceId)
 	if err != nil {
 		errs.Inc()
 
-		err = fmt.Errorf("inmem.Call: %s", err.Error())
+		err = fmt.Errorf("inmem_client.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("couldn't get service by id")
@@ -192,20 +193,20 @@ findContentId:
 	// reset if nothing
 	if contentId == 0 {
 		logCtx.Debug("No content avialable, reset remembered cache..")
-		if err = inmem.SentContentClear(p.Msisdn, serviceId); err != nil {
+		if err = inmem_client.SentContentClear(p.Msisdn, serviceId); err != nil {
 			errs.Inc()
 
-			err = fmt.Errorf("inmem.Call: %s", err.Error())
+			err = fmt.Errorf("inmem_client.Call: %s", err.Error())
 			logCtx.WithFields(log.Fields{
 				"error": err.Error(),
 			}).Debug("cannot clear sent content")
 			return msg, err
 		}
-		usedContentIds, err := inmem.SentContentGet(p.Msisdn, serviceId)
+		usedContentIds, err := inmem_client.SentContentGet(p.Msisdn, serviceId)
 		if err != nil {
 			errs.Inc()
 
-			err = fmt.Errorf("inmem.Call: %s", err.Error())
+			err = fmt.Errorf("inmem_client.Call: %s", err.Error())
 			logCtx.WithFields(log.Fields{
 				"error": err.Error(),
 			}).Errorf("couldn't get used content ids")
@@ -220,9 +221,9 @@ findContentId:
 		}
 	}
 	// update in-memory cache usedContentIds
-	if err = inmem.SentContentPush(p.Msisdn, serviceId, contentId); err != nil {
+	if err = inmem_client.SentContentPush(p.Msisdn, serviceId, contentId); err != nil {
 		errs.Inc()
-		err = fmt.Errorf("inmem.Call: %s", err.Error())
+		err = fmt.Errorf("inmem_client.Call: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Debug("cannot push sent content")
@@ -231,7 +232,7 @@ findContentId:
 
 	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
-	contentInfo, err := inmem.GetContentById(contentId)
+	contentInfo, err := inmem_client.GetContentById(contentId)
 	if err != nil {
 		if retry < ContentSvc.sConfig.SearchRetryCount {
 			retry++
