@@ -8,7 +8,7 @@ service:
   retry_count: 10
 
 inmem_client:
-  dsn: localhost:50307
+  port: 50307
   timeout: 10
 
 notifier:
