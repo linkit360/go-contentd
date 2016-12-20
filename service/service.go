@@ -52,12 +52,13 @@ func (t ContentSentProperties) key() string {
 }
 
 func InitService(
+	metricInstancePrefix string,
 	appName string,
 	sConf ContentServiceConfig,
 	inMemConfig inmem_client.RPCClientConfig,
 	notifConf NotifierConfig,
 ) {
-	initMetrics(appName)
+	initMetrics(metricInstancePrefix, appName)
 
 	log.SetLevel(log.DebugLevel)
 	inmem_client.Init(inMemConfig)
@@ -279,7 +280,6 @@ findContentId:
 	// record sent content
 	if err = ContentSvc.notifier.ContentSentNotify(msg); err != nil {
 		errs.Inc()
-
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Info("notify content sent error")
@@ -291,10 +291,11 @@ findContentId:
 	return msg, nil
 }
 
-func initMetrics(name string) {
-	m.Init(name)
-	callsSuccess = m.NewGauge("", "", "success", "success overall")
-	errs = m.NewGauge("", "", "errors", "errors overall")
+func initMetrics(metricInstancePrefix, appName string) {
+	m.Init(metricInstancePrefix)
+
+	callsSuccess = m.NewGauge("", appName, "success", "success overall")
+	errs = m.NewGauge("", appName, "errors", "errors overall")
 
 	go func() {
 		for range time.Tick(time.Minute) {
