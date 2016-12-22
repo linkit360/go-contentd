@@ -89,6 +89,11 @@ type GetUrlByCampaignHashParams struct {
 	Pixel        string `json:"pixel"`
 }
 
+type GetUniqueUrlParams struct {
+	Msisdn     string `json:"msisdn"`
+	CampaignId int64  `json:"campaign_id"`
+}
+
 // Get Content by campaign hash
 // 1) find first avialable contentId
 // 2) reset cache if nothing found

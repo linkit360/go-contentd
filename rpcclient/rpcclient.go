@@ -83,3 +83,31 @@ redo:
 
 	return &res, nil
 }
+
+func GetUniqueUrl(req service.GetUniqueUrlParams) (string, error) {
+
+	var res string
+	redialed := false
+	if contentClient.connection == nil {
+		contentClient.dial()
+	}
+redo:
+	if err := contentClient.connection.Call("SVC.GetUniqueUrl", req, &res); err != nil {
+		log.WithFields(log.Fields{
+			"msg":    err.Error(),
+			"msisdn": req.Msisdn,
+		}).Debug("contentd rpc client now is unavialable")
+		if !redialed {
+			contentClient.dial()
+			redialed = true
+			goto redo
+		}
+		log.WithFields(log.Fields{
+			"campaign_id": req.CampaignId,
+			"msisdn":      req.Msisdn,
+			"error":       err.Error(),
+		}).Error("redial did't help")
+		return res, err
+	}
+	return res, nil
+}
