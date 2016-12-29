@@ -11,6 +11,8 @@ import (
 
 	"github.com/vostrok/contentd/service"
 	inmem "github.com/vostrok/inmem/rpcclient"
+	"github.com/vostrok/utils/amqp"
+	"github.com/vostrok/utils/db"
 )
 
 type ServerConfig struct {
@@ -23,7 +25,8 @@ type AppConfig struct {
 	Server               ServerConfig                 `yaml:"server"`
 	Service              service.ContentServiceConfig `yaml:"service"`
 	InMemConfig          inmem.RPCClientConfig        `yaml:"inmem_client"`
-	Notifier             service.NotifierConfig       `yaml:"notifier"`
+	Notifier             amqp.NotifierConfig          `yaml:"notifier"`
+	DBConfig             db.DataBaseConfig            `yaml:"db"`
 }
 
 func LoadConfig() AppConfig {
@@ -51,9 +54,7 @@ func LoadConfig() AppConfig {
 	}
 
 	appConfig.Server.RPCPort = envString("PORT", appConfig.Server.RPCPort)
-	appConfig.Server.HttpPort = envString("METRICS_PORT", appConfig.Server.HttpPort)
-
-	appConfig.Notifier.Rbmq.Conn.Host = envString("RBMQ_HOST", appConfig.Notifier.Rbmq.Conn.Host)
+	appConfig.Server.HttpPort = envString("HTTP_PORT", appConfig.Server.HttpPort)
 
 	log.WithField("config", fmt.Sprintf("%#v", appConfig)).Info("Config loaded")
 	return appConfig

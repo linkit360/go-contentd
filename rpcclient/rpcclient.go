@@ -54,7 +54,7 @@ func (c *Client) dial() error {
 	return nil
 }
 
-func Get(req service.GetUrlByCampaignHashParams) (*service.ContentSentProperties, error) {
+func Get(req service.GetContentParams) (*service.ContentSentProperties, error) {
 	var res service.ContentSentProperties
 
 	redialed := false
@@ -62,7 +62,7 @@ func Get(req service.GetUrlByCampaignHashParams) (*service.ContentSentProperties
 		contentClient.dial()
 	}
 redo:
-	if err := contentClient.connection.Call("SVC.GetContentByCampaign", req, &res); err != nil {
+	if err := contentClient.connection.Call("SVC.GetContent", req, &res); err != nil {
 		log.WithFields(log.Fields{
 			"tid":    req.Tid,
 			"msg":    err.Error(),
@@ -84,7 +84,7 @@ redo:
 	return &res, nil
 }
 
-func GetUniqueUrl(req service.GetUniqueUrlParams) (string, error) {
+func GetUniqueUrl(req service.GetUniqueUrlParams) (*service.ContentSentProperties, error) {
 
 	var res string
 	redialed := false
@@ -106,6 +106,31 @@ redo:
 			"campaign_id": req.CampaignId,
 			"msisdn":      req.Msisdn,
 			"error":       err.Error(),
+		}).Error("redial did't help")
+		return res, err
+	}
+	return res, nil
+}
+
+func GetByUniqueUrl(req string) (*service.ContentSentProperties, error) {
+
+	var res string
+	redialed := false
+	if contentClient.connection == nil {
+		contentClient.dial()
+	}
+redo:
+	if err := contentClient.connection.Call("SVC.GetByUniqueUrl", req, &res); err != nil {
+		log.WithFields(log.Fields{
+			"msg": err.Error(),
+		}).Debug("contentd rpc client now is unavialable")
+		if !redialed {
+			contentClient.dial()
+			redialed = true
+			goto redo
+		}
+		log.WithFields(log.Fields{
+			"error": err.Error(),
 		}).Error("redial did't help")
 		return res, err
 	}

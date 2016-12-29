@@ -7,18 +7,16 @@ server:
 
 service:
   retry_count: 10
+  unique_urls_salt: !&5x~_"~R_-9Uri
 
 inmem_client:
   timeout: 10
 
 notifier:
-  queues:
-    content_sent: content_sent
-  rbmq:
-    conn:
-      user: linkit
-      pass: dg-U_oHhy7-
-      host: localhost
-      port: 5672
-    chan_capacity: 10000
-    pending_buffer_path: /home/centos/linkit/contentd_pending.json
+  conn:
+    user: linkit
+    pass: dg-U_oHhy7-
+    host: localhost
+    port: 5672
+  chan_capacity: 100
+  pending_buffer_path: /home/centos/linkit/contentd_pending.json
