@@ -132,9 +132,16 @@ func initMetrics(metricInstancePrefix, appName string) *Metrics {
 	return metrics
 }
 
-func notifyNewUniqueContentURL(msg ContentSentProperties) (err error) {
+func notifyUniqueContentURL(eventName string, msg ContentSentProperties) (err error) {
+	priority := uint8(0)
+	if eventName == "create" {
+		priority = uint8(1)
+	} else if eventName == "delete" {
+	} else {
+		log.WithField("event", eventName).Fatal("unknown event name")
+	}
+
 	msg.SentAt = time.Now().UTC()
-	eventName := "unique_url_created"
 	defer func() {
 		fields := log.Fields{
 			"q":     ContentSvc.conf.Queues.UniqueUrl,
@@ -163,9 +170,11 @@ func notifyNewUniqueContentURL(msg ContentSentProperties) (err error) {
 		err = fmt.Errorf(eventName+" json.Marshal: %s", err.Error())
 		return
 	}
+
 	ContentSvc.n.Publish(amqp.AMQPMessage{
 		QueueName: ContentSvc.conf.Queues.UniqueUrl,
 		Body:      body,
+		Priority:  priority,
 	})
 	return nil
 }

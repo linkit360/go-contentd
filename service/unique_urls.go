@@ -80,7 +80,7 @@ func (svc *ContentService) loadUniqueUrls() (prop []ContentSentProperties, err e
 		"id_campaign, "+
 		"id_service, "+
 		"operator_code, "+
-		"country_code, "+
+		"country_code "+
 		"FROM %scontent_unique_urls",
 		svc.conf.DBConfig.TablePrefix)
 
@@ -165,8 +165,7 @@ func (svc *ContentService) loadUniqueUrl(uniqueUrl string) (p ContentSentPropert
 	defer rows.Close()
 
 	for rows.Next() {
-		var p ContentSentProperties
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&p.SentAt,
 			&p.Msisdn,
 			&p.Tid,

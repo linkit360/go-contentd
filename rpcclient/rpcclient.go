@@ -22,7 +22,7 @@ type Client struct {
 	conf       RPCClientConfig
 }
 type RPCClientConfig struct {
-	DSN     string `default:"localhost:70401" yaml:"dsn"`
+	DSN     string `default:"localhost:50301" yaml:"dsn"`
 	Timeout int    `default:"10" yaml:"timeout"`
 }
 
@@ -86,7 +86,7 @@ redo:
 
 func GetUniqueUrl(req service.GetUniqueUrlParams) (*service.ContentSentProperties, error) {
 
-	var res string
+	var res service.ContentSentProperties
 	redialed := false
 	if contentClient.connection == nil {
 		contentClient.dial()
@@ -107,14 +107,14 @@ redo:
 			"msisdn":      req.Msisdn,
 			"error":       err.Error(),
 		}).Error("redial did't help")
-		return res, err
+		return &res, err
 	}
-	return res, nil
+	return &res, nil
 }
 
 func GetByUniqueUrl(req string) (*service.ContentSentProperties, error) {
 
-	var res string
+	var res service.ContentSentProperties
 	redialed := false
 	if contentClient.connection == nil {
 		contentClient.dial()
@@ -132,7 +132,7 @@ redo:
 		log.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Error("redial did't help")
-		return res, err
+		return &res, err
 	}
-	return res, nil
+	return &res, nil
 }

@@ -7,7 +7,7 @@ server:
 
 service:
   retry_count: 10
-  unique_urls_salt: !&5x~_"~R_-9Uri
+  unique_urls_salt: !&5x~_~R_-9Uri
 
 inmem_client:
   timeout: 10
@@ -20,3 +20,16 @@ notifier:
     port: 5672
   chan_capacity: 100
   pending_buffer_path: /home/centos/linkit/contentd_pending.json
+
+db:
+  conn_ttl: -1
+  max_open_conns: 15
+  max_idle_conns: 10
+  timeout: 30
+  name: linkit_dev
+  user: linkit
+  pass: E0kZN8pUAs63wePepf
+  port: 5432
+  host: linkit.cz3twmoynbq5.eu-central-1.rds.amazonaws.com
+  ssl_mode: disable
+  table_prefix: xmp_

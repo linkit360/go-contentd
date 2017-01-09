@@ -14,6 +14,7 @@ import (
 	inmem_client "github.com/vostrok/inmem/rpcclient"
 )
 
+// create unique url and send it to dispatcher and db
 func CreateUniqueUrl(msg ContentSentProperties) (string, error) {
 	uniqueUrl, err := ContentSvc.sid.Generate()
 	if err != nil {
@@ -28,11 +29,17 @@ func CreateUniqueUrl(msg ContentSentProperties) (string, error) {
 	}
 	msg.UniqueUrl = uniqueUrl
 	ContentSvc.setUniqueUrlCache(msg)
-	notifyNewUniqueContentURL(msg)
+	notifyUniqueContentURL("create", msg)
 	return msg.UniqueUrl, nil
 }
 
+// get unique url and remove it from cache, remove from db
 func GetByUniqueUrl(uniqueUrl string) (msg ContentSentProperties, err error) {
+	defer func() {
+		ContentSvc.deleteUniqueUrlCache(msg)
+		notifyUniqueContentURL("delete", msg)
+	}()
+
 	msg, err = ContentSvc.getUniqueUrlCache(uniqueUrl)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -56,7 +63,6 @@ func GetByUniqueUrl(uniqueUrl string) (msg ContentSentProperties, err error) {
 		"url": uniqueUrl,
 		"tid": msg.Tid,
 	}).Debug("got from cache")
-	ContentSvc.deleteUniqueUrlCache(msg)
 	return
 }
 
