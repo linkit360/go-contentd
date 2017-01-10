@@ -35,6 +35,7 @@ func (svc *ContentService) getUniqueUrlCache(uniqueUrl string) (ContentSentPrope
 	}
 	return ContentSentProperties{}, fmt.Errorf("Cannot decifer: %s, %v", uniqueUrl, v)
 }
+
 func (svc *ContentService) setUniqueUrlCache(r ContentSentProperties) {
 	_, found := svc.uniqUrlCache.Get(r.UniqueUrl)
 	if !found {
@@ -45,6 +46,7 @@ func (svc *ContentService) setUniqueUrlCache(r ContentSentProperties) {
 		}).Debug("set url cache")
 	}
 }
+
 func (svc *ContentService) deleteUniqueUrlCache(r ContentSentProperties) {
 	svc.uniqUrlCache.Delete(r.UniqueUrl)
 	log.WithFields(log.Fields{
