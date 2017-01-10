@@ -2,12 +2,13 @@ package handlers
 
 import (
 	"github.com/vostrok/contentd/service"
+	inmem_service "github.com/vostrok/inmem/service"
 )
 
 type RPCContentService struct{}
 
 func (rpc *RPCContentService) GetContent(
-	req service.GetContentParams, res *service.ContentSentProperties) (err error) {
+	req service.GetContentParams, res *inmem_service.ContentSentProperties) (err error) {
 
 	*res, err = service.GetContent(req)
 	if err != nil {
@@ -18,7 +19,7 @@ func (rpc *RPCContentService) GetContent(
 }
 
 func (rpc *RPCContentService) GetUniqueUrl(
-	req service.GetContentParams, res *service.ContentSentProperties) (err error) {
+	req service.GetContentParams, res *inmem_service.ContentSentProperties) (err error) {
 
 	contentProperties, err := service.GetContent(req)
 	if err != nil {
@@ -39,7 +40,7 @@ func (rpc *RPCContentService) GetUniqueUrl(
 }
 
 func (rpc *RPCContentService) GetByUniqueUrl(
-	req string, res *service.ContentSentProperties) (err error) {
+	req string, res *inmem_service.ContentSentProperties) (err error) {
 
 	contentProperties, err := service.GetByUniqueUrl(req)
 	if err != nil {

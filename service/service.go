@@ -12,10 +12,11 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
+	inmem_service "github.com/vostrok/inmem/service"
 )
 
 // create unique url and send it to dispatcher and db
-func CreateUniqueUrl(msg ContentSentProperties) (string, error) {
+func CreateUniqueUrl(msg inmem_service.ContentSentProperties) (string, error) {
 	uniqueUrl, err := ContentSvc.sid.Generate()
 	if err != nil {
 		ContentSvc.m.errs.Inc()
@@ -28,35 +29,24 @@ func CreateUniqueUrl(msg ContentSentProperties) (string, error) {
 		return "", err
 	}
 	msg.UniqueUrl = uniqueUrl
-	ContentSvc.setUniqueUrlCache(msg)
+
+	inmem_client.SetUniqueUrlCache(msg)
 	notifyUniqueContentURL("create", msg)
 	return msg.UniqueUrl, nil
 }
 
 // get unique url and remove it from cache, remove from db
-func GetByUniqueUrl(uniqueUrl string) (msg ContentSentProperties, err error) {
+func GetByUniqueUrl(uniqueUrl string) (msg inmem_service.ContentSentProperties, err error) {
 	defer func() {
-		ContentSvc.deleteUniqueUrlCache(msg)
+		inmem_client.DeleteUniqueUrlCache(msg)
 		notifyUniqueContentURL("delete", msg)
 	}()
 
-	msg, err = ContentSvc.getUniqueUrlCache(uniqueUrl)
+	msg, err = inmem_client.GetUniqueUrlCache(uniqueUrl)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"url": uniqueUrl,
 		}).Debug("failed to get from cache")
-
-		msg, err = ContentSvc.loadUniqueUrl(uniqueUrl)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"url": uniqueUrl,
-			}).Debug("failed to load from db")
-			return
-		}
-		log.WithFields(log.Fields{
-			"url": uniqueUrl,
-			"tid": msg.Tid,
-		}).Debug("got from db")
 		return
 	}
 	log.WithFields(log.Fields{
@@ -70,7 +60,7 @@ func GetByUniqueUrl(uniqueUrl string) (msg ContentSentProperties, err error) {
 // 1) find first avialable contentId
 // 2) reset cache if nothing found
 // 3) record that the content is shown to the user
-func GetContent(p GetContentParams) (msg ContentSentProperties, err error) {
+func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, err error) {
 	defer func() {
 		if err != nil {
 			msg.Error = err.Error()
@@ -223,7 +213,7 @@ findContentId:
 		}
 	}
 
-	msg = ContentSentProperties{
+	msg = inmem_service.ContentSentProperties{
 		Msisdn:      p.Msisdn,
 		Tid:         p.Tid,
 		ContentPath: contentInfo.Path,

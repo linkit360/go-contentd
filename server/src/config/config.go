@@ -12,7 +12,6 @@ import (
 	"github.com/vostrok/contentd/service"
 	inmem "github.com/vostrok/inmem/rpcclient"
 	"github.com/vostrok/utils/amqp"
-	"github.com/vostrok/utils/db"
 )
 
 type ServerConfig struct {
@@ -26,7 +25,6 @@ type AppConfig struct {
 	Service              service.ContentServiceConfig `yaml:"service"`
 	InMemConfig          inmem.RPCClientConfig        `yaml:"inmem_client"`
 	Notifier             amqp.NotifierConfig          `yaml:"notifier"`
-	DBConfig             db.DataBaseConfig            `yaml:"db"`
 }
 
 func LoadConfig() AppConfig {

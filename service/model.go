@@ -9,7 +9,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -17,6 +16,7 @@ import (
 	shortid "github.com/ventu-io/go-shortid"
 
 	inmem_client "github.com/vostrok/inmem/rpcclient"
+	inmem_service "github.com/vostrok/inmem/service"
 	"github.com/vostrok/utils/amqp"
 	"github.com/vostrok/utils/db"
 	m "github.com/vostrok/utils/metrics"
@@ -49,14 +49,10 @@ func InitService(
 	sConf ContentServiceConfig,
 	inMemConfig inmem_client.RPCClientConfig,
 	notifierConfig amqp.NotifierConfig,
-	dbConfig db.DataBaseConfig,
 ) {
-
-	sConf.DBConfig = dbConfig
 	ContentSvc = &ContentService{
 		m:    initMetrics(metricInstancePrefix, appName),
 		sid:  shortid.MustNew(1, shortid.DefaultABC, uint64(time.Now().UnixNano())),
-		db:   db.Init(dbConfig),
 		conf: sConf,
 	}
 	log.SetLevel(log.DebugLevel)
@@ -64,31 +60,7 @@ func InitService(
 
 	ContentSvc.n = amqp.NewNotifier(notifierConfig)
 
-	ContentSvc.initUniqueUrlsCache()
-
 	log.Debug("init done")
-}
-
-type ContentSentProperties struct {
-	SentAt       time.Time `json:"sent_at,omitempty"`
-	Msisdn       string    `json:"msisdn,omitempty"`
-	Tid          string    `json:"tid,omitempty"`
-	ContentPath  string    `json:"content_path,omitempty"`
-	UniqueUrl    string    `json:"unique_url,omitempty"`
-	ContentName  string    `json:"content_name,omitempty"`
-	CampaignId   int64     `json:"campaign_id,omitempty"`
-	ContentId    int64     `json:"content_id,omitempty"`
-	ServiceId    int64     `json:"service_id,omitempty"`
-	OperatorCode int64     `json:"operator_code,omitempty"`
-	CountryCode  int64     `json:"country_code,omitempty"`
-	Error        string    `json:"error,omitempty"`
-}
-
-// Used to get a key of used content ids
-// when key == msisdn, then uniq content exactly
-// when key == msisdn + service_id, then unique content per sevice
-func (t ContentSentProperties) key() string {
-	return t.Msisdn + "-" + strconv.FormatInt(t.ServiceId, 10)
 }
 
 type GetContentParams struct {
@@ -132,7 +104,7 @@ func initMetrics(metricInstancePrefix, appName string) *Metrics {
 	return metrics
 }
 
-func notifyUniqueContentURL(eventName string, msg ContentSentProperties) (err error) {
+func notifyUniqueContentURL(eventName string, msg inmem_service.ContentSentProperties) (err error) {
 	priority := uint8(0)
 	if eventName == "create" {
 		priority = uint8(1)

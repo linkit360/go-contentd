@@ -12,7 +12,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/felixge/tcpkeepalive"
 
-	"github.com/vostrok/contentd/service"
+	contentd_service "github.com/vostrok/contentd/service"
+	inmem_service "github.com/vostrok/inmem/service"
 )
 
 var contentClient *Client
@@ -54,8 +55,8 @@ func (c *Client) dial() error {
 	return nil
 }
 
-func Get(req service.GetContentParams) (*service.ContentSentProperties, error) {
-	var res service.ContentSentProperties
+func Get(req contentd_service.GetContentParams) (*inmem_service.ContentSentProperties, error) {
+	var res inmem_service.ContentSentProperties
 
 	redialed := false
 	if contentClient.connection == nil {
@@ -84,9 +85,9 @@ redo:
 	return &res, nil
 }
 
-func GetUniqueUrl(req service.GetUniqueUrlParams) (*service.ContentSentProperties, error) {
+func GetUniqueUrl(req contentd_service.GetUniqueUrlParams) (*inmem_service.ContentSentProperties, error) {
 
-	var res service.ContentSentProperties
+	var res inmem_service.ContentSentProperties
 	redialed := false
 	if contentClient.connection == nil {
 		contentClient.dial()
@@ -112,9 +113,9 @@ redo:
 	return &res, nil
 }
 
-func GetByUniqueUrl(req string) (*service.ContentSentProperties, error) {
+func GetByUniqueUrl(req string) (*inmem_service.ContentSentProperties, error) {
 
-	var res service.ContentSentProperties
+	var res inmem_service.ContentSentProperties
 	redialed := false
 	if contentClient.connection == nil {
 		contentClient.dial()
