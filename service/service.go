@@ -61,19 +61,24 @@ func GetByUniqueUrl(uniqueUrl string) (msg inmem_service.ContentSentProperties, 
 // 2) reset cache if nothing found
 // 3) record that the content is shown to the user
 func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, err error) {
+	msg = inmem_service.ContentSentProperties{
+		Msisdn:       p.Msisdn,
+		Tid:          p.Tid,
+		ServiceId:    p.ServiceId,
+		CampaignId:   p.CampaignId,
+		OperatorCode: p.OperatorCode,
+		CountryCode:  p.CountryCode,
+	}
 	defer func() {
 		if err != nil {
 			msg.Error = err.Error()
 		}
 	}()
-
 	logCtx := log.WithFields(log.Fields{
-		"msisdn":     p.Msisdn,
 		"service_id": p.ServiceId,
 		"tid":        p.Tid,
 	})
-	if p.Msisdn == "" || p.Tid == "" ||
-		p.ServiceId == 0 || p.CampaignId == 0 {
+	if p.ServiceId == 0 || p.CampaignId == 0 {
 		ContentSvc.m.errs.Inc()
 
 		err = errors.New("Empty required params")
@@ -213,14 +218,9 @@ findContentId:
 		}
 	}
 
-	msg = inmem_service.ContentSentProperties{
-		Msisdn:      p.Msisdn,
-		Tid:         p.Tid,
-		ContentPath: contentInfo.Path,
-		ContentName: contentInfo.Name,
-		ContentId:   contentId,
-		ServiceId:   serviceId,
-	}
+	msg.ContentPath = contentInfo.Path
+	msg.ContentName = contentInfo.Name
+	msg.ContentId = contentId
 
 	logCtx.WithFields(log.Fields{
 		"tid":       msg.Tid,
