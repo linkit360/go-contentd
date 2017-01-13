@@ -12,7 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/felixge/tcpkeepalive"
 
-	contentd_service "github.com/vostrok/contentd/service"
+	content_service "github.com/vostrok/contentd/service"
 	inmem_service "github.com/vostrok/inmem/service"
 )
 
@@ -55,7 +55,7 @@ func (c *Client) dial() error {
 	return nil
 }
 
-func Get(req contentd_service.GetContentParams) (*inmem_service.ContentSentProperties, error) {
+func Get(req content_service.GetContentParams) (*inmem_service.ContentSentProperties, error) {
 	var res inmem_service.ContentSentProperties
 
 	redialed := false
@@ -85,7 +85,7 @@ redo:
 	return &res, nil
 }
 
-func GetUniqueUrl(req contentd_service.GetUniqueUrlParams) (*inmem_service.ContentSentProperties, error) {
+func GetUniqueUrl(req content_service.GetContentParams) (*inmem_service.ContentSentProperties, error) {
 
 	var res inmem_service.ContentSentProperties
 	redialed := false

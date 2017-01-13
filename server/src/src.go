@@ -23,7 +23,6 @@ func Run() {
 	appConfig := config.LoadConfig()
 
 	service.InitService(
-		appConfig.MetricInstancePrefix,
 		appConfig.AppName,
 		appConfig.Service,
 		appConfig.InMemConfig,

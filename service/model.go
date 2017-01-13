@@ -44,14 +44,13 @@ type QueuesConfig struct {
 }
 
 func InitService(
-	metricInstancePrefix string,
 	appName string,
 	sConf ContentServiceConfig,
 	inMemConfig inmem_client.RPCClientConfig,
 	notifierConfig amqp.NotifierConfig,
 ) {
 	ContentSvc = &ContentService{
-		m:    initMetrics(metricInstancePrefix, appName),
+		m:    initMetrics(appName),
 		sid:  shortid.MustNew(1, shortid.DefaultABC, uint64(time.Now().UnixNano())),
 		conf: sConf,
 	}
@@ -72,11 +71,6 @@ type GetContentParams struct {
 	CountryCode  int64  `json:"country_code"`
 }
 
-type GetUniqueUrlParams struct {
-	Msisdn     string `json:"msisdn"`
-	CampaignId int64  `json:"campaign_id"`
-}
-
 type Metrics struct {
 	callsSuccess m.Gauge
 	errs         m.Gauge
@@ -84,8 +78,7 @@ type Metrics struct {
 	dbErrors     m.Gauge
 }
 
-func initMetrics(metricInstancePrefix, appName string) *Metrics {
-	m.Init(metricInstancePrefix)
+func initMetrics(appName string) *Metrics {
 
 	metrics := &Metrics{
 		callsSuccess: m.NewGauge("", appName, "success", "success"),
