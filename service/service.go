@@ -38,15 +38,26 @@ func CreateUniqueUrl(msg inmem_service.ContentSentProperties) (string, error) {
 // get unique url and remove it from cache, remove from db
 func GetByUniqueUrl(uniqueUrl string) (msg inmem_service.ContentSentProperties, err error) {
 	defer func() {
-		inmem_client.DeleteUniqueUrlCache(msg)
-		notifyUniqueContentURL("delete", msg)
+		if err = inmem_client.DeleteUniqueUrlCache(msg); err != nil {
+			log.WithFields(log.Fields{
+				"tid":   msg.Tid,
+				"error": err.Error(),
+			}).Error("inmem_client.DeleteUniqueUrlCache")
+		}
+		if err = notifyUniqueContentURL("delete", msg); err != nil {
+			log.WithFields(log.Fields{
+				"tid":   msg.Tid,
+				"error": err.Error(),
+			}).Error("notifyUniqueContentURL")
+		}
 	}()
 
 	msg, err = inmem_client.GetUniqueUrlCache(uniqueUrl)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"url": uniqueUrl,
-		}).Debug("failed to get from cache")
+			"error": err.Error(),
+			"url":   uniqueUrl,
+		}).Debug("inmem_client.GetUniqueUrlCache")
 		return
 	}
 	log.WithFields(log.Fields{

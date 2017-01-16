@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/vostrok/contentd/service"
 	inmem_service "github.com/vostrok/inmem/service"
 )
@@ -9,6 +11,8 @@ type RPCContentService struct{}
 
 func (rpc *RPCContentService) GetContent(
 	req service.GetContentParams, res *inmem_service.ContentSentProperties) (err error) {
+
+	log.WithFields(log.Fields{}).Info("GetContent")
 
 	*res, err = service.GetContent(req)
 	if err != nil {
@@ -21,8 +25,13 @@ func (rpc *RPCContentService) GetContent(
 func (rpc *RPCContentService) GetUniqueUrl(
 	req service.GetContentParams, res *inmem_service.ContentSentProperties) (err error) {
 
+	log.WithFields(log.Fields{}).Info("GetUniqueUrl")
+
 	contentProperties, err := service.GetContent(req)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("GetUniqueUrl")
 		res.Error = err.Error()
 		err = nil
 		return
@@ -30,6 +39,9 @@ func (rpc *RPCContentService) GetUniqueUrl(
 
 	uniqueUrl, err := service.CreateUniqueUrl(contentProperties)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("GetUniqueUrl")
 		res.Error = err.Error()
 		err = nil
 		return
@@ -42,8 +54,12 @@ func (rpc *RPCContentService) GetUniqueUrl(
 func (rpc *RPCContentService) GetByUniqueUrl(
 	req string, res *inmem_service.ContentSentProperties) (err error) {
 
+	log.WithFields(log.Fields{}).Info("GetByUniqueUrl")
 	contentProperties, err := service.GetByUniqueUrl(req)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("GetByUniqueUrl")
 		res.Error = err.Error()
 		err = nil
 		return

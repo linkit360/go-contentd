@@ -55,7 +55,10 @@ func InitService(
 		conf: sConf,
 	}
 	log.SetLevel(log.DebugLevel)
-	inmem_client.Init(inMemConfig)
+
+	if err := inmem_client.Init(inMemConfig); err != nil {
+		log.Fatal("cannot init inmem client")
+	}
 
 	ContentSvc.n = amqp.NewNotifier(notifierConfig)
 
