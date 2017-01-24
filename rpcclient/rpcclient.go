@@ -1,7 +1,7 @@
 package rpcclient
 
 // rpc client for "github.com/vostrok/contentd/server"
-// supports reconnects when disconnected
+// fails when disconnected
 
 import (
 	"fmt"

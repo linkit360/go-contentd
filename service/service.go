@@ -1,8 +1,3 @@
-// this file makes 2 things:
-// 1) - get content url by campaign hash and msisdn
-// 2) - add a record to the content_sent table
-// the file itself is big enough, bcz we keep all required tables in memory (as a in-memory cache)
-
 package service
 
 import (
@@ -15,7 +10,9 @@ import (
 	inmem_service "github.com/vostrok/inmem/service"
 )
 
-// create unique url and send it to dispatcher and db
+// does nothing but genetrates unique url
+// save in db via qlistener
+// update cache in inmemory
 func CreateUniqueUrl(msg inmem_service.ContentSentProperties) (string, error) {
 	uniqueUrl, err := ContentSvc.sid.Generate()
 	if err != nil {
@@ -35,7 +32,9 @@ func CreateUniqueUrl(msg inmem_service.ContentSentProperties) (string, error) {
 	return msg.UniqueUrl, nil
 }
 
-// get unique url and remove it from cache, remove from db
+// get unique url from inmemory (and delete it)
+// remove from db
+// and return url
 func GetByUniqueUrl(uniqueUrl string) (msg inmem_service.ContentSentProperties, err error) {
 	defer func() {
 		if err = inmem_client.DeleteUniqueUrlCache(msg); err != nil {
@@ -67,10 +66,9 @@ func GetByUniqueUrl(uniqueUrl string) (msg inmem_service.ContentSentProperties, 
 	return
 }
 
-// Get Content by campaign hash
-// 1) find first avialable contentId
-// 2) reset cache if nothing found
-// 3) record that the content is shown to the user
+// get content, not url for content.
+// filters already shown content
+// reset cache if nothing found and show again
 func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, err error) {
 	msg = inmem_service.ContentSentProperties{
 		Msisdn:       p.Msisdn,

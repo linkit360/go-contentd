@@ -7,6 +7,8 @@ import (
 	inmem_service "github.com/vostrok/inmem/service"
 )
 
+// this is the json rpc server for the service
+
 type RPCContentService struct{}
 
 func (rpc *RPCContentService) GetContent(
