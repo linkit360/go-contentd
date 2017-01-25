@@ -40,7 +40,7 @@ type ContentServiceConfig struct {
 }
 
 type QueuesConfig struct {
-	UniqueUrl string `default:"contentd_unique_url" yaml:"contentd_unique_url"`
+	UniqueUrls string `default:"unique_urls" yaml:"unique_urls"`
 }
 
 func InitService(
@@ -112,7 +112,7 @@ func notifyUniqueContentURL(eventName string, msg inmem_service.ContentSentPrope
 	msg.SentAt = time.Now().UTC()
 	defer func() {
 		fields := log.Fields{
-			"q":     ContentSvc.conf.Queues.UniqueUrl,
+			"q":     ContentSvc.conf.Queues.UniqueUrls,
 			"event": eventName,
 			"tid":   msg.Tid,
 		}
@@ -140,7 +140,7 @@ func notifyUniqueContentURL(eventName string, msg inmem_service.ContentSentPrope
 	}
 
 	ContentSvc.n.Publish(amqp.AMQPMessage{
-		QueueName: ContentSvc.conf.Queues.UniqueUrl,
+		QueueName: ContentSvc.conf.Queues.UniqueUrls,
 		Body:      body,
 		Priority:  priority,
 	})
