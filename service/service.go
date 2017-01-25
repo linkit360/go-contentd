@@ -26,9 +26,24 @@ func CreateUniqueUrl(msg inmem_service.ContentSentProperties) (string, error) {
 		return "", err
 	}
 	msg.UniqueUrl = uniqueUrl
+	log.WithFields(log.Fields{
+		"url": uniqueUrl,
+		"tid": msg.Tid,
+		"msg": fmt.Sprintf("%#v", msg),
+	}).Debug("set cache")
 
-	inmem_client.SetUniqueUrlCache(msg)
-	notifyUniqueContentURL("create", msg)
+	if err := inmem_client.SetUniqueUrlCache(msg); err != nil {
+		log.WithFields(log.Fields{
+			"tid":   msg.Tid,
+			"error": err.Error(),
+		}).Error("set cache")
+	}
+	if err := notifyUniqueContentURL("create", msg); err != nil {
+		log.WithFields(log.Fields{
+			"tid":   msg.Tid,
+			"error": err.Error(),
+		}).Error("notifyUniqueContentURL")
+	}
 	return msg.UniqueUrl, nil
 }
 
@@ -62,6 +77,7 @@ func GetByUniqueUrl(uniqueUrl string) (msg inmem_service.ContentSentProperties, 
 	log.WithFields(log.Fields{
 		"url": uniqueUrl,
 		"tid": msg.Tid,
+		"msg": fmt.Sprintf("%#v", msg),
 	}).Debug("got from cache")
 	return
 }
@@ -71,12 +87,13 @@ func GetByUniqueUrl(uniqueUrl string) (msg inmem_service.ContentSentProperties, 
 // reset cache if nothing found and show again
 func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, err error) {
 	msg = inmem_service.ContentSentProperties{
-		Msisdn:       p.Msisdn,
-		Tid:          p.Tid,
-		ServiceId:    p.ServiceId,
-		CampaignId:   p.CampaignId,
-		OperatorCode: p.OperatorCode,
-		CountryCode:  p.CountryCode,
+		Msisdn:         p.Msisdn,
+		Tid:            p.Tid,
+		ServiceId:      p.ServiceId,
+		CampaignId:     p.CampaignId,
+		OperatorCode:   p.OperatorCode,
+		CountryCode:    p.CountryCode,
+		SubscriptionId: p.SubscriptionId,
 	}
 	defer func() {
 		if err != nil {

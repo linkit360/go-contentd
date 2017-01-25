@@ -66,12 +66,13 @@ func InitService(
 }
 
 type GetContentParams struct {
-	Msisdn       string `json:"msisdn"`
-	Tid          string `json:"tid"`
-	ServiceId    int64  `json:"service_id"`
-	CampaignId   int64  `json:"campaign_id"`
-	OperatorCode int64  `json:"operator_code"`
-	CountryCode  int64  `json:"country_code"`
+	Msisdn         string `json:"msisdn"`
+	Tid            string `json:"tid"`
+	ServiceId      int64  `json:"service_id"`
+	CampaignId     int64  `json:"campaign_id"`
+	OperatorCode   int64  `json:"operator_code"`
+	CountryCode    int64  `json:"country_code"`
+	SubscriptionId int64  `json:"subscription_id"`
 }
 
 type Metrics struct {
