@@ -25,7 +25,7 @@ type Client struct {
 	m          *Metrics
 }
 type RPCClientConfig struct {
-	DSN     string `default:"localhost:50301" yaml:"dsn"`
+	DSN     string `default:":50301" yaml:"dsn"`
 	Timeout int    `default:"10" yaml:"timeout"`
 }
 
