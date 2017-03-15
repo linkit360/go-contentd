@@ -46,7 +46,7 @@ type QueuesConfig struct {
 func InitService(
 	appName string,
 	sConf ContentServiceConfig,
-	inMemConfig inmem_client.RPCClientConfig,
+	inMemConfig inmem_client.ClientConfig,
 	notifierConfig amqp.NotifierConfig,
 ) {
 	ContentSvc = &ContentService{
