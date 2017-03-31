@@ -15,11 +15,11 @@ import (
 	cache "github.com/patrickmn/go-cache"
 	shortid "github.com/ventu-io/go-shortid"
 
-	inmem_client "github.com/vostrok/inmem/rpcclient"
-	inmem_service "github.com/vostrok/inmem/service"
-	"github.com/vostrok/utils/amqp"
-	"github.com/vostrok/utils/db"
-	m "github.com/vostrok/utils/metrics"
+	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	inmem_service "github.com/linkit360/go-inmem/service"
+	"github.com/linkit360/go-utils/amqp"
+	"github.com/linkit360/go-utils/db"
+	m "github.com/linkit360/go-utils/metrics"
 )
 
 var ContentSvc *ContentService

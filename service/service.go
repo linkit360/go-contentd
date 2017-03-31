@@ -6,8 +6,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	inmem_client "github.com/vostrok/inmem/rpcclient"
-	inmem_service "github.com/vostrok/inmem/service"
+	inmem_client "github.com/linkit360/go-inmem/rpcclient"
+	inmem_service "github.com/linkit360/go-inmem/service"
 )
 
 // does nothing but genetrates unique url

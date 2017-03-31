@@ -9,9 +9,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
-	"github.com/vostrok/contentd/service"
-	inmem "github.com/vostrok/inmem/rpcclient"
-	"github.com/vostrok/utils/amqp"
+	"github.com/linkit360/go-contentd/service"
+	inmem "github.com/linkit360/go-inmem/rpcclient"
+	"github.com/linkit360/go-utils/amqp"
 )
 
 type ServerConfig struct {

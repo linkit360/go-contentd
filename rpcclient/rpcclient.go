@@ -12,9 +12,9 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	content_service "github.com/vostrok/contentd/service"
-	inmem_service "github.com/vostrok/inmem/service"
-	m "github.com/vostrok/utils/metrics"
+	content_service "github.com/linkit360/go-contentd/service"
+	inmem_service "github.com/linkit360/go-inmem/service"
+	m "github.com/linkit360/go-utils/metrics"
 )
 
 var cli *Client

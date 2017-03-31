@@ -5,7 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	contentd_service "github.com/vostrok/contentd/service"
+
+	contentd_service "github.com/linkit360/go-contentd/service"
 )
 
 func init() {

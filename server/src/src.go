@@ -13,10 +13,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
-	"github.com/vostrok/contentd/server/src/config"
-	"github.com/vostrok/contentd/server/src/handlers"
-	"github.com/vostrok/contentd/service"
-	"github.com/vostrok/utils/metrics"
+	"github.com/linkit360/go-contentd/server/src/config"
+	"github.com/linkit360/go-contentd/server/src/handlers"
+	"github.com/linkit360/go-contentd/service"
+	"github.com/linkit360/go-utils/metrics"
 )
 
 func Run() {

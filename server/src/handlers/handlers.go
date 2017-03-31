@@ -3,8 +3,8 @@ package handlers
 import (
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/vostrok/contentd/service"
-	inmem_service "github.com/vostrok/inmem/service"
+	"github.com/linkit360/go-contentd/service"
+	inmem_service "github.com/linkit360/go-inmem/service"
 )
 
 // this is the json rpc server for the service
