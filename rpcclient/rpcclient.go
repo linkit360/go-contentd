@@ -88,17 +88,31 @@ func (c *Client) dial() error {
 
 func call(funcName string, req interface{}, res interface{}) error {
 	begin := time.Now()
-	if cli.connection == nil {
-		cli.dial()
-	}
+
+	retryCount := 0
+retry:
 	if err := cli.connection.Call(funcName, req, &res); err != nil {
 		cli.m.RPCConnectError.Inc()
+
 		if err == rpc.ErrShutdown {
+
+			if retryCount < 2 {
+				retryCount = retryCount + 1
+				cli.connection.Close()
+				cli.dial()
+				log.WithFields(log.Fields{
+					"retry": retryCount,
+					"error": err.Error(),
+				}).Debug("retrying..")
+				goto retry
+			}
+
 			log.WithFields(log.Fields{
 				"func":  funcName,
 				"error": err.Error(),
 			}).Fatal("call")
 		}
+
 		log.WithFields(log.Fields{
 			"func":  funcName,
 			"error": err.Error(),
