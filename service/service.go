@@ -165,9 +165,9 @@ findContentId:
 	contentId := int64(0)
 	for _, id := range avialableContentIds {
 		if usedContentIds != nil {
-			if usedId, ok := usedContentIds[id]; ok {
+			if _, ok := usedContentIds[id]; ok {
 				logCtx.WithFields(log.Fields{
-					"contentId": usedId,
+					"contentId": id,
 				}).Debug("contentId already used, next..")
 
 				continue
