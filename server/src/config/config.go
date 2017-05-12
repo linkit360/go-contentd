@@ -9,7 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/jinzhu/configor"
 
-	"github.com/linkit360/go-contentd/service"
+	"github.com/linkit360/go-contentd/server/src/service"
 	inmem "github.com/linkit360/go-inmem/rpcclient"
 	"github.com/linkit360/go-utils/amqp"
 )

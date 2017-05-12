@@ -1,11 +1,11 @@
-.PHONY: dev run build
+.PHONY: config run build
 
 VERSION=$(shell git describe --always --long --dirty)
 
 version:
 	 @echo Version IS $(VERSION)
 
-dev:
+config:
 	rm ./server ; go build ;./server 
 
 run:
@@ -19,5 +19,5 @@ build:
 	go build -ldflags "-s -w" -o bin/contentd-linux-amd64; \
 
 cp:
-	cp  bin/contentd-linux-amd64 ~/linkit; cp dev/contentd.yml ~/linkit/
+	cp  bin/contentd-linux-amd64 ~/linkit; cp config/contentd.yml ~/linkit/
 

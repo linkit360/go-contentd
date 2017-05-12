@@ -15,7 +15,7 @@ import (
 
 	"github.com/linkit360/go-contentd/server/src/config"
 	"github.com/linkit360/go-contentd/server/src/handlers"
-	"github.com/linkit360/go-contentd/service"
+	"github.com/linkit360/go-contentd/server/src/service"
 	"github.com/linkit360/go-utils/metrics"
 )
 

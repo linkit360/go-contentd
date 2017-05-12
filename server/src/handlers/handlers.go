@@ -3,7 +3,7 @@ package handlers
 import (
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/linkit360/go-contentd/service"
+	"github.com/linkit360/go-contentd/server/src/service"
 	inmem_service "github.com/linkit360/go-inmem/service"
 )
 
