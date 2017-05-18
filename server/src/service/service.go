@@ -89,8 +89,8 @@ func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, er
 	msg = inmem_service.ContentSentProperties{
 		Msisdn:         p.Msisdn,
 		Tid:            p.Tid,
-		ServiceId:      p.ServiceId,
-		CampaignId:     p.CampaignId,
+		ServiceCode:    p.ServiceCode,
+		CampaignCode:   p.CampaignCode,
 		OperatorCode:   p.OperatorCode,
 		CountryCode:    p.CountryCode,
 		SubscriptionId: p.SubscriptionId,
@@ -101,10 +101,10 @@ func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, er
 		}
 	}()
 	logCtx := log.WithFields(log.Fields{
-		"service_id": p.ServiceId,
+		"service_id": p.ServiceCode,
 		"tid":        p.Tid,
 	})
-	if p.ServiceId == 0 || p.CampaignId == 0 {
+	if p.ServiceCode == "" || p.CampaignCode == "" {
 		ContentSvc.m.errs.Inc()
 
 		err = errors.New("Empty required params")
@@ -116,9 +116,9 @@ func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, er
 		return msg, errors.New("Required params not found")
 	}
 
-	serviceId := p.ServiceId
+	serviceCode := p.ServiceCode
 
-	usedContentIds, err := inmem_client.SentContentGet(p.Msisdn, serviceId)
+	usedContentIds, err := inmem_client.SentContentGet(p.Msisdn, serviceCode)
 	if err != nil {
 		ContentSvc.m.errs.Inc()
 
@@ -131,10 +131,10 @@ func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, er
 	logCtx.WithFields(log.Fields{
 		"tid":            p.Tid,
 		"usedContentIds": usedContentIds,
-		"serviceId":      serviceId,
+		"serviceId":      serviceCode,
 	}).Debug("got used content ids")
 
-	svc, err := inmem_client.GetServiceById(serviceId)
+	svc, err := inmem_client.GetServiceByCode(serviceCode)
 	if err != nil {
 		ContentSvc.m.errs.Inc()
 
@@ -152,7 +152,7 @@ func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, er
 	if len(avialableContentIds) == 0 {
 		ContentSvc.m.errs.Inc()
 
-		err = fmt.Errorf("No content for service %d at all", p.ServiceId)
+		err = fmt.Errorf("No content for service %d at all", p.ServiceCode)
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("No content avialabale at all")
@@ -183,7 +183,7 @@ findContentId:
 	// reset if nothing
 	if contentId == 0 {
 		logCtx.Debug("No content avialable, reset remembered cache..")
-		if err = inmem_client.SentContentClear(p.Msisdn, serviceId); err != nil {
+		if err = inmem_client.SentContentClear(p.Msisdn, serviceCode); err != nil {
 			ContentSvc.m.errs.Inc()
 
 			err = fmt.Errorf("inmem_client.SentContentClear: %s", err.Error())
@@ -192,7 +192,7 @@ findContentId:
 			}).Debug("cannot clear sent content")
 			return msg, err
 		}
-		usedContentIds, err := inmem_client.SentContentGet(p.Msisdn, serviceId)
+		usedContentIds, err := inmem_client.SentContentGet(p.Msisdn, serviceCode)
 		if err != nil {
 			ContentSvc.m.errs.Inc()
 
@@ -211,7 +211,7 @@ findContentId:
 		}
 	}
 	// update in-memory cache usedContentIds
-	if err = inmem_client.SentContentPush(p.Msisdn, serviceId, contentId); err != nil {
+	if err = inmem_client.SentContentPush(p.Msisdn, serviceCode, contentId); err != nil {
 		ContentSvc.m.errs.Inc()
 		err = fmt.Errorf("inmem_client.SentContentPush: %s", err.Error())
 		logCtx.WithFields(log.Fields{
@@ -234,7 +234,7 @@ findContentId:
 		} else {
 			ContentSvc.m.errs.Inc()
 
-			err = fmt.Errorf("Failed to find valid contentId: serviceId %d", p.ServiceId)
+			err = fmt.Errorf("Failed to find valid contentId: serviceId %d", p.ServiceCode)
 			logCtx.WithFields(log.Fields{
 				"contentId": contentId,
 				"retry":     retry,
