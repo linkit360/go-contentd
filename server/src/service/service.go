@@ -229,6 +229,7 @@ findContentId:
 			logCtx.WithFields(log.Fields{
 				"contentId": contentId,
 				"retry":     retry,
+				"error":     err.Error(),
 			}).Error("contentId not found in content")
 			goto findContentId
 		} else {
