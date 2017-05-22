@@ -15,8 +15,8 @@ import (
 	cache "github.com/patrickmn/go-cache"
 	shortid "github.com/ventu-io/go-shortid"
 
-	inmem_client "github.com/linkit360/go-inmem/rpcclient"
-	inmem_service "github.com/linkit360/go-inmem/service"
+	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	inmem_service "github.com/linkit360/go-mid/service"
 	"github.com/linkit360/go-utils/amqp"
 	"github.com/linkit360/go-utils/db"
 	m "github.com/linkit360/go-utils/metrics"

@@ -4,7 +4,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/linkit360/go-contentd/server/src/service"
-	inmem_service "github.com/linkit360/go-inmem/service"
+	inmem_service "github.com/linkit360/go-mid/service"
 )
 
 // this is the json rpc server for the service

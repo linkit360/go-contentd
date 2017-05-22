@@ -10,7 +10,7 @@ import (
 	"github.com/jinzhu/configor"
 
 	"github.com/linkit360/go-contentd/server/src/service"
-	inmem "github.com/linkit360/go-inmem/rpcclient"
+	inmem "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/amqp"
 )
 

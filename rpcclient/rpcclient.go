@@ -13,7 +13,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	content_service "github.com/linkit360/go-contentd/server/src/service"
-	inmem_service "github.com/linkit360/go-inmem/service"
+	inmem_service "github.com/linkit360/go-mid/service"
 	m "github.com/linkit360/go-utils/metrics"
 )
 
