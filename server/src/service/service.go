@@ -144,12 +144,12 @@ func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, er
 		}).Errorf("couldn't get service by id")
 		return msg, err
 	}
-	avialableContentIds := svc.ContentIds
+	avialableContentCodes := svc.ContentCodes
 	logCtx.WithFields(log.Fields{
-		"avialableContentIds": avialableContentIds,
+		"avialableContentIds": avialableContentCodes,
 	}).Debug("got avialable content ids")
 
-	if len(avialableContentIds) == 0 {
+	if len(avialableContentCodes) == 0 {
 		ContentSvc.m.errs.Inc()
 
 		err = fmt.Errorf("No content for service %d at all", p.ServiceCode)
@@ -162,8 +162,8 @@ func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, er
 	retry := 0
 findContentId:
 	// find first avialable contentId
-	contentId := int64(0)
-	for _, id := range avialableContentIds {
+	contentId := ""
+	for _, id := range avialableContentCodes {
 		if usedContentIds != nil {
 			if _, ok := usedContentIds[id]; ok {
 				logCtx.WithFields(log.Fields{
@@ -173,7 +173,7 @@ findContentId:
 				continue
 			}
 		}
-		contentId = int64(id)
+		contentId = id
 		logCtx.WithFields(log.Fields{
 			"contentId": id,
 		}).Debug("contentId found")
@@ -181,7 +181,7 @@ findContentId:
 	}
 
 	// reset if nothing
-	if contentId == 0 {
+	if contentId == "" {
 		logCtx.Debug("No content avialable, reset remembered cache..")
 		if err = inmem_client.SentContentClear(p.Msisdn, serviceCode); err != nil {
 			ContentSvc.m.errs.Inc()
@@ -205,8 +205,8 @@ findContentId:
 		logCtx.WithFields(log.Fields{
 			"usedContentIds": usedContentIds,
 		}).Debug("now used content ids is")
-		for _, id := range avialableContentIds {
-			contentId = int64(id)
+		for _, id := range avialableContentCodes {
+			contentId = id
 			break
 		}
 	}
@@ -222,7 +222,7 @@ findContentId:
 
 	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
-	contentInfo, err := inmem_client.GetContentById(contentId)
+	contentInfo, err := inmem_client.GetContentByCode(contentId)
 	if err != nil {
 		if retry < ContentSvc.conf.SearchRetryCount {
 			retry++
@@ -247,12 +247,12 @@ findContentId:
 
 	msg.ContentPath = contentInfo.Path
 	msg.ContentName = contentInfo.Name
-	msg.ContentId = contentId
+	msg.ContentCode = contentId
 
 	logCtx.WithFields(log.Fields{
 		"tid":       msg.Tid,
 		"path":      msg.ContentPath,
-		"contentID": msg.ContentId,
+		"contentID": msg.ContentCode,
 	}).Info("success")
 
 	ContentSvc.m.callsSuccess.Inc()
