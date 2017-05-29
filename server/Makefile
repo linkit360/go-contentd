@@ -19,5 +19,5 @@ build:
 	go build -ldflags "-s -w" -o bin/contentd-linux-amd64; \
 
 cp:
-	cp  bin/contentd-linux-amd64 ~/linkit; cp config/contentd.yml ~/linkit/
+	cp  bin/contentd-linux-amd64 ~/linkit; cp dev/contentd.yml ~/linkit/
 

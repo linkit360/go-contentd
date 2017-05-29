@@ -13,8 +13,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	content_service "github.com/linkit360/go-contentd/server/src/service"
-	inmem_service "github.com/linkit360/go-mid/service"
 	m "github.com/linkit360/go-utils/metrics"
+	"github.com/linkit360/go-utils/structs"
 )
 
 var cli *Client
@@ -128,8 +128,8 @@ retry:
 	return nil
 }
 
-func Get(req content_service.GetContentParams) (*inmem_service.ContentSentProperties, error) {
-	var res inmem_service.ContentSentProperties
+func Get(req content_service.GetContentParams) (*structs.ContentSentProperties, error) {
+	var res structs.ContentSentProperties
 	err := call(
 		"SVC.GetContent",
 		req,
@@ -137,8 +137,8 @@ func Get(req content_service.GetContentParams) (*inmem_service.ContentSentProper
 	)
 	return &res, err
 }
-func GetUniqueUrl(req content_service.GetContentParams) (*inmem_service.ContentSentProperties, error) {
-	var res inmem_service.ContentSentProperties
+func GetUniqueUrl(req content_service.GetContentParams) (*structs.ContentSentProperties, error) {
+	var res structs.ContentSentProperties
 	err := call(
 		"SVC.GetUniqueUrl",
 		req,
@@ -146,8 +146,8 @@ func GetUniqueUrl(req content_service.GetContentParams) (*inmem_service.ContentS
 	)
 	return &res, err
 }
-func GetByUniqueUrl(req string) (*inmem_service.ContentSentProperties, error) {
-	var res inmem_service.ContentSentProperties
+func GetByUniqueUrl(req string) (*structs.ContentSentProperties, error) {
+	var res structs.ContentSentProperties
 	err := call(
 		"SVC.GetByUniqueUrl",
 		req,

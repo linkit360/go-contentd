@@ -16,10 +16,10 @@ import (
 	shortid "github.com/ventu-io/go-shortid"
 
 	inmem_client "github.com/linkit360/go-mid/rpcclient"
-	inmem_service "github.com/linkit360/go-mid/service"
 	"github.com/linkit360/go-utils/amqp"
 	"github.com/linkit360/go-utils/db"
 	m "github.com/linkit360/go-utils/metrics"
+	"github.com/linkit360/go-utils/structs"
 )
 
 var ContentSvc *ContentService
@@ -101,7 +101,7 @@ func initMetrics(appName string) *Metrics {
 	return metrics
 }
 
-func notifyUniqueContentURL(eventName string, msg inmem_service.ContentSentProperties) (err error) {
+func notifyUniqueContentURL(eventName string, msg structs.ContentSentProperties) (err error) {
 	priority := uint8(0)
 	if eventName == "create" {
 		priority = uint8(1)

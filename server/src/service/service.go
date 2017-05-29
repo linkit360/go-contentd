@@ -7,13 +7,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	inmem_client "github.com/linkit360/go-mid/rpcclient"
-	inmem_service "github.com/linkit360/go-mid/service"
+	"github.com/linkit360/go-utils/structs"
 )
 
 // does nothing but genetrates unique url
 // save in db via qlistener
 // update cache in inmemory
-func CreateUniqueUrl(msg inmem_service.ContentSentProperties) (string, error) {
+func CreateUniqueUrl(msg structs.ContentSentProperties) (string, error) {
 	uniqueUrl, err := ContentSvc.sid.Generate()
 	if err != nil {
 		ContentSvc.m.errs.Inc()
@@ -50,7 +50,7 @@ func CreateUniqueUrl(msg inmem_service.ContentSentProperties) (string, error) {
 // get unique url from inmemory (and delete it)
 // remove from db
 // and return url
-func GetByUniqueUrl(uniqueUrl string) (msg inmem_service.ContentSentProperties, err error) {
+func GetByUniqueUrl(uniqueUrl string) (msg structs.ContentSentProperties, err error) {
 	defer func() {
 		if err = inmem_client.DeleteUniqueUrlCache(msg); err != nil {
 			log.WithFields(log.Fields{
@@ -85,8 +85,8 @@ func GetByUniqueUrl(uniqueUrl string) (msg inmem_service.ContentSentProperties, 
 // get content, not url for content.
 // filters already shown content
 // reset cache if nothing found and show again
-func GetContent(p GetContentParams) (msg inmem_service.ContentSentProperties, err error) {
-	msg = inmem_service.ContentSentProperties{
+func GetContent(p GetContentParams) (msg structs.ContentSentProperties, err error) {
+	msg = structs.ContentSentProperties{
 		Msisdn:         p.Msisdn,
 		Tid:            p.Tid,
 		ServiceCode:    p.ServiceCode,
@@ -222,7 +222,7 @@ findContentId:
 
 	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
-	contentInfo, err := inmem_client.GetContentByCode(contentId)
+	contentInfo, err := inmem_client.GetContentById(contentId)
 	if err != nil {
 		if retry < ContentSvc.conf.SearchRetryCount {
 			retry++
@@ -245,8 +245,8 @@ findContentId:
 		}
 	}
 
-	msg.ContentPath = contentInfo.Path
-	msg.ContentName = contentInfo.Name
+	msg.ContentPath = contentInfo.Name
+	msg.ContentName = contentInfo.Title
 	msg.ContentCode = contentId
 
 	logCtx.WithFields(log.Fields{

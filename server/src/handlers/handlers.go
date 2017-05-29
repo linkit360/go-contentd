@@ -4,7 +4,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/linkit360/go-contentd/server/src/service"
-	inmem_service "github.com/linkit360/go-mid/service"
+	"github.com/linkit360/go-utils/structs"
 )
 
 // this is the json rpc server for the service
@@ -12,7 +12,7 @@ import (
 type RPCContentService struct{}
 
 func (rpc *RPCContentService) GetContent(
-	req service.GetContentParams, res *inmem_service.ContentSentProperties) (err error) {
+	req service.GetContentParams, res *structs.ContentSentProperties) (err error) {
 
 	log.WithFields(log.Fields{}).Info("GetContent")
 
@@ -25,7 +25,7 @@ func (rpc *RPCContentService) GetContent(
 }
 
 func (rpc *RPCContentService) GetUniqueUrl(
-	req service.GetContentParams, res *inmem_service.ContentSentProperties) (err error) {
+	req service.GetContentParams, res *structs.ContentSentProperties) (err error) {
 
 	log.WithFields(log.Fields{}).Info("GetUniqueUrl")
 
@@ -54,7 +54,7 @@ func (rpc *RPCContentService) GetUniqueUrl(
 }
 
 func (rpc *RPCContentService) GetByUniqueUrl(
-	req string, res *inmem_service.ContentSentProperties) (err error) {
+	req string, res *structs.ContentSentProperties) (err error) {
 
 	log.WithFields(log.Fields{}).Info("GetByUniqueUrl")
 	contentProperties, err := service.GetByUniqueUrl(req)
