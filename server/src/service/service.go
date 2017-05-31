@@ -6,13 +6,13 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/structs"
 )
 
 // does nothing but genetrates unique url
 // save in db via qlistener
-// update cache in inmemory
+// update cache in midory
 func CreateUniqueUrl(msg structs.ContentSentProperties) (string, error) {
 	uniqueUrl, err := ContentSvc.sid.Generate()
 	if err != nil {
@@ -32,7 +32,7 @@ func CreateUniqueUrl(msg structs.ContentSentProperties) (string, error) {
 		"msg": fmt.Sprintf("%#v", msg),
 	}).Debug("set cache")
 
-	if err := inmem_client.SetUniqueUrlCache(msg); err != nil {
+	if err := mid_client.SetUniqueUrlCache(msg); err != nil {
 		log.WithFields(log.Fields{
 			"tid":   msg.Tid,
 			"error": err.Error(),
@@ -47,16 +47,16 @@ func CreateUniqueUrl(msg structs.ContentSentProperties) (string, error) {
 	return msg.UniqueUrl, nil
 }
 
-// get unique url from inmemory (and delete it)
+// get unique url from midory (and delete it)
 // remove from db
 // and return url
 func GetByUniqueUrl(uniqueUrl string) (msg structs.ContentSentProperties, err error) {
 	defer func() {
-		if err = inmem_client.DeleteUniqueUrlCache(msg); err != nil {
+		if err = mid_client.DeleteUniqueUrlCache(msg); err != nil {
 			log.WithFields(log.Fields{
 				"tid":   msg.Tid,
 				"error": err.Error(),
-			}).Error("inmem_client.DeleteUniqueUrlCache")
+			}).Error("mid_client.DeleteUniqueUrlCache")
 		}
 		if err = notifyUniqueContentURL("delete", msg); err != nil {
 			log.WithFields(log.Fields{
@@ -66,12 +66,12 @@ func GetByUniqueUrl(uniqueUrl string) (msg structs.ContentSentProperties, err er
 		}
 	}()
 
-	msg, err = inmem_client.GetUniqueUrlCache(uniqueUrl)
+	msg, err = mid_client.GetUniqueUrlCache(uniqueUrl)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err.Error(),
 			"url":   uniqueUrl,
-		}).Debug("inmem_client.GetUniqueUrlCache")
+		}).Debug("mid_client.GetUniqueUrlCache")
 		return
 	}
 	log.WithFields(log.Fields{
@@ -118,11 +118,11 @@ func GetContent(p GetContentParams) (msg structs.ContentSentProperties, err erro
 
 	serviceCode := p.ServiceCode
 
-	usedContentIds, err := inmem_client.SentContentGet(p.Msisdn, serviceCode)
+	usedContentIds, err := mid_client.SentContentGet(p.Msisdn, serviceCode)
 	if err != nil {
 		ContentSvc.m.errs.Inc()
 
-		err = fmt.Errorf("inmem_client.SentContentGet: %s", err.Error())
+		err = fmt.Errorf("mid_client.SentContentGet: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("couldn't get used content ids")
@@ -134,22 +134,22 @@ func GetContent(p GetContentParams) (msg structs.ContentSentProperties, err erro
 		"serviceId":      serviceCode,
 	}).Debug("got used content ids")
 
-	svc, err := inmem_client.GetServiceByCode(serviceCode)
+	svc, err := mid_client.GetServiceByCode(serviceCode)
 	if err != nil {
 		ContentSvc.m.errs.Inc()
 
-		err = fmt.Errorf("inmem_client.GetServiceById: %s", err.Error())
+		err = fmt.Errorf("mid_client.GetServiceById: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("couldn't get service by id")
 		return msg, err
 	}
-	avialableContentCodes := svc.ContentCodes
+	avialableContentIds := svc.ContentIds
 	logCtx.WithFields(log.Fields{
-		"avialableContentIds": avialableContentCodes,
+		"avialableContentIds": avialableContentIds,
 	}).Debug("got avialable content ids")
 
-	if len(avialableContentCodes) == 0 {
+	if len(avialableContentIds) == 0 {
 		ContentSvc.m.errs.Inc()
 
 		err = fmt.Errorf("No content for service %d at all", p.ServiceCode)
@@ -163,7 +163,7 @@ func GetContent(p GetContentParams) (msg structs.ContentSentProperties, err erro
 findContentId:
 	// find first avialable contentId
 	contentId := ""
-	for _, id := range avialableContentCodes {
+	for _, id := range avialableContentIds {
 		if usedContentIds != nil {
 			if _, ok := usedContentIds[id]; ok {
 				logCtx.WithFields(log.Fields{
@@ -183,20 +183,20 @@ findContentId:
 	// reset if nothing
 	if contentId == "" {
 		logCtx.Debug("No content avialable, reset remembered cache..")
-		if err = inmem_client.SentContentClear(p.Msisdn, serviceCode); err != nil {
+		if err = mid_client.SentContentClear(p.Msisdn, serviceCode); err != nil {
 			ContentSvc.m.errs.Inc()
 
-			err = fmt.Errorf("inmem_client.SentContentClear: %s", err.Error())
+			err = fmt.Errorf("mid_client.SentContentClear: %s", err.Error())
 			logCtx.WithFields(log.Fields{
 				"error": err.Error(),
 			}).Debug("cannot clear sent content")
 			return msg, err
 		}
-		usedContentIds, err := inmem_client.SentContentGet(p.Msisdn, serviceCode)
+		usedContentIds, err := mid_client.SentContentGet(p.Msisdn, serviceCode)
 		if err != nil {
 			ContentSvc.m.errs.Inc()
 
-			err = fmt.Errorf("inmem_client.SentContentGet: %s", err.Error())
+			err = fmt.Errorf("mid_client.SentContentGet: %s", err.Error())
 			logCtx.WithFields(log.Fields{
 				"error": err.Error(),
 			}).Errorf("couldn't get used content ids")
@@ -205,15 +205,15 @@ findContentId:
 		logCtx.WithFields(log.Fields{
 			"usedContentIds": usedContentIds,
 		}).Debug("now used content ids is")
-		for _, id := range avialableContentCodes {
+		for _, id := range avialableContentIds {
 			contentId = id
 			break
 		}
 	}
 	// update in-memory cache usedContentIds
-	if err = inmem_client.SentContentPush(p.Msisdn, serviceCode, contentId); err != nil {
+	if err = mid_client.SentContentPush(p.Msisdn, serviceCode, contentId); err != nil {
 		ContentSvc.m.errs.Inc()
-		err = fmt.Errorf("inmem_client.SentContentPush: %s", err.Error())
+		err = fmt.Errorf("mid_client.SentContentPush: %s", err.Error())
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Debug("cannot push sent content")
@@ -222,7 +222,7 @@ findContentId:
 
 	logCtx.WithField("contentId", contentId).Debug("choosen content")
 
-	contentInfo, err := inmem_client.GetContentById(contentId)
+	contentInfo, err := mid_client.GetContentById(contentId)
 	if err != nil {
 		if retry < ContentSvc.conf.SearchRetryCount {
 			retry++

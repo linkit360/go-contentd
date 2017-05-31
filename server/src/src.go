@@ -25,7 +25,7 @@ func Run() {
 	service.InitService(
 		appConfig.AppName,
 		appConfig.Service,
-		appConfig.InMemConfig,
+		appConfig.MidConfig,
 		appConfig.Notifier,
 	)
 

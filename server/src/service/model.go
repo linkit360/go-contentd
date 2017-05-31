@@ -15,7 +15,7 @@ import (
 	cache "github.com/patrickmn/go-cache"
 	shortid "github.com/ventu-io/go-shortid"
 
-	inmem_client "github.com/linkit360/go-mid/rpcclient"
+	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/amqp"
 	"github.com/linkit360/go-utils/db"
 	m "github.com/linkit360/go-utils/metrics"
@@ -34,9 +34,8 @@ type ContentService struct {
 }
 
 type ContentServiceConfig struct {
-	SearchRetryCount int               `default:"10" yaml:"retry_count"`
-	Queues           QueuesConfig      `yaml:"queues"`
-	DBConfig         db.DataBaseConfig `yaml:"db"`
+	SearchRetryCount int          `default:"10" yaml:"retry_count"`
+	Queues           QueuesConfig `yaml:"queues"`
 }
 
 type QueuesConfig struct {
@@ -46,7 +45,7 @@ type QueuesConfig struct {
 func InitService(
 	appName string,
 	sConf ContentServiceConfig,
-	inMemConfig inmem_client.ClientConfig,
+	midConfig mid_client.ClientConfig,
 	notifierConfig amqp.NotifierConfig,
 ) {
 	ContentSvc = &ContentService{
@@ -56,8 +55,8 @@ func InitService(
 	}
 	log.SetLevel(log.DebugLevel)
 
-	if err := inmem_client.Init(inMemConfig); err != nil {
-		log.Fatal("cannot init inmem client")
+	if err := mid_client.Init(midConfig); err != nil {
+		log.Fatal("cannot init mid client")
 	}
 
 	ContentSvc.n = amqp.NewNotifier(notifierConfig)

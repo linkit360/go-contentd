@@ -10,7 +10,7 @@ import (
 	"github.com/jinzhu/configor"
 
 	"github.com/linkit360/go-contentd/server/src/service"
-	inmem "github.com/linkit360/go-mid/rpcclient"
+	mid "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/amqp"
 )
 
@@ -19,11 +19,11 @@ type ServerConfig struct {
 	HttpPort string `default:"50302" yaml:"http_port"`
 }
 type AppConfig struct {
-	AppName     string                       `yaml:"app_name"`
-	Server      ServerConfig                 `yaml:"server"`
-	Service     service.ContentServiceConfig `yaml:"service"`
-	InMemConfig inmem.ClientConfig           `yaml:"inmem_client"`
-	Notifier    amqp.NotifierConfig          `yaml:"notifier"`
+	AppName   string                       `yaml:"app_name"`
+	Server    ServerConfig                 `yaml:"server"`
+	MidConfig mid.ClientConfig             `yaml:"mid_client"`
+	Service   service.ContentServiceConfig `yaml:"service"`
+	Notifier  amqp.NotifierConfig          `yaml:"notifier"`
 }
 
 func LoadConfig() AppConfig {

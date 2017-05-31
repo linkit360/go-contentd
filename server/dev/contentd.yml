@@ -4,15 +4,14 @@ server:
   rpc_port: 50301
   http_port: 50302
 
-service:
-  retry_count: 10
-  unique_urls_salt: !&5x~_~R_-9Uri
-  queues:
-    unique_urls: unique_urls
-
-inmem_client:
+mid_client:
   dsn: :50307
   timeout: 10
+
+service:
+  retry_count: 10
+  queues:
+    unique_urls: unique_urls
 
 notifier:
   conn:
