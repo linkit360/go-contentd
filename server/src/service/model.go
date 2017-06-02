@@ -17,7 +17,6 @@ import (
 
 	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/amqp"
-	"github.com/linkit360/go-utils/db"
 	m "github.com/linkit360/go-utils/metrics"
 	"github.com/linkit360/go-utils/structs"
 )
