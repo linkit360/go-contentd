@@ -10,7 +10,7 @@ import (
 	"net/rpc/jsonrpc"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	content_service "github.com/linkit360/go-contentd/server/src/service"
 	m "github.com/linkit360/go-utils/metrics"

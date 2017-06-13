@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
+	"encoding/json"
 	mid_client "github.com/linkit360/go-mid/rpcclient"
 	"github.com/linkit360/go-utils/structs"
 )
@@ -101,8 +102,8 @@ func GetContent(p GetContentParams) (msg structs.ContentSentProperties, err erro
 		}
 	}()
 	logCtx := log.WithFields(log.Fields{
-		"service_id": p.ServiceCode,
-		"tid":        p.Tid,
+		"service_code": p.ServiceCode,
+		"tid":          p.Tid,
 	})
 	if p.ServiceCode == "" || p.CampaignCode == "" {
 		ContentSvc.m.errs.Inc()
@@ -118,41 +119,47 @@ func GetContent(p GetContentParams) (msg structs.ContentSentProperties, err erro
 
 	serviceCode := p.ServiceCode
 
-	usedContentIds, err := mid_client.SentContentGet(p.Msisdn, serviceCode)
-	if err != nil {
-		ContentSvc.m.errs.Inc()
+	usedContentIds := make(map[string]struct{})
+	if len(p.Msisdn) > 5 {
+		usedContentIds, err = mid_client.SentContentGet(p.Msisdn, serviceCode)
+		if err != nil {
+			ContentSvc.m.errs.Inc()
 
-		err = fmt.Errorf("mid_client.SentContentGet: %s", err.Error())
-		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Errorf("couldn't get used content ids")
-		return msg, err
+			err = fmt.Errorf("mid_client.SentContentGet: %s", err.Error())
+			logCtx.WithFields(log.Fields{
+				"error": err.Error(),
+			}).Errorf("couldn't get used content ids")
+			return msg, err
+		}
 	}
 	logCtx.WithFields(log.Fields{
 		"tid":            p.Tid,
 		"usedContentIds": usedContentIds,
-		"serviceId":      serviceCode,
-	}).Debug("got used content ids")
+		"service_code":   serviceCode,
+	}).Debug("used content ids")
 
 	svc, err := mid_client.GetServiceByCode(serviceCode)
 	if err != nil {
 		ContentSvc.m.errs.Inc()
 
-		err = fmt.Errorf("mid_client.GetServiceById: %s", err.Error())
+		err = fmt.Errorf("mid_client.GetServiceByCode: %s", err.Error())
 		logCtx.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Errorf("couldn't get service by id")
+			"error":      err.Error(),
+			"service_id": serviceCode,
+		}).Errorf("couldn't get service by code")
 		return msg, err
 	}
+	sJson, err := json.Marshal(svc)
 	avialableContentIds := svc.ContentIds
 	logCtx.WithFields(log.Fields{
 		"avialableContentIds": avialableContentIds,
+		"svc": string(sJson),
 	}).Debug("got avialable content ids")
 
 	if len(avialableContentIds) == 0 {
 		ContentSvc.m.errs.Inc()
 
-		err = fmt.Errorf("No content for service %d at all", p.ServiceCode)
+		err = fmt.Errorf("No content for service %s at all", p.ServiceCode)
 		logCtx.WithFields(log.Fields{
 			"error": err.Error(),
 		}).Errorf("No content avialabale at all")
@@ -198,13 +205,16 @@ findContentId:
 
 			err = fmt.Errorf("mid_client.SentContentGet: %s", err.Error())
 			logCtx.WithFields(log.Fields{
-				"error": err.Error(),
+				"error":      err.Error(),
+				"service_id": svc.Id,
 			}).Errorf("couldn't get used content ids")
 			return msg, err
 		}
 		logCtx.WithFields(log.Fields{
+			"service_id":     svc.Id,
 			"usedContentIds": usedContentIds,
 		}).Debug("now used content ids is")
+
 		for _, id := range avialableContentIds {
 			contentId = id
 			break
@@ -247,12 +257,12 @@ findContentId:
 
 	msg.ContentPath = contentInfo.Name
 	msg.ContentName = contentInfo.Title
-	msg.ContentCode = contentId
+	msg.ContentId = contentId
 
 	logCtx.WithFields(log.Fields{
 		"tid":       msg.Tid,
 		"path":      msg.ContentPath,
-		"contentID": msg.ContentCode,
+		"contentID": msg.ContentId,
 	}).Info("success")
 
 	ContentSvc.m.callsSuccess.Inc()

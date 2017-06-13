@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/linkit360/go-contentd/server/src/service"
 	"github.com/linkit360/go-utils/structs"
