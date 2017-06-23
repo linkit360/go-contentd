@@ -91,7 +91,7 @@ func GetContent(p GetContentParams) (msg structs.ContentSentProperties, err erro
 		Msisdn:         p.Msisdn,
 		Tid:            p.Tid,
 		ServiceCode:    p.ServiceCode,
-		CampaignCode:   p.CampaignCode,
+		CampaignId:     p.CampaignId,
 		OperatorCode:   p.OperatorCode,
 		CountryCode:    p.CountryCode,
 		SubscriptionId: p.SubscriptionId,
@@ -105,7 +105,7 @@ func GetContent(p GetContentParams) (msg structs.ContentSentProperties, err erro
 		"service_code": p.ServiceCode,
 		"tid":          p.Tid,
 	})
-	if p.ServiceCode == "" || p.CampaignCode == "" {
+	if p.ServiceCode == "" || p.CampaignId == "" {
 		ContentSvc.m.errs.Inc()
 
 		err = errors.New("Empty required params")
