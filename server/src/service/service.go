@@ -111,8 +111,8 @@ func GetContent(p GetContentParams) (msg structs.ContentSentProperties, err erro
 		err = errors.New("Empty required params")
 		logCtx.WithFields(log.Fields{
 			"error":  err.Error(),
-			"params": p,
-		}).Error("required params are empty")
+			"params": fmt.Sprintf("%#v", p),
+		}).Error("required params (service code /campaign code) are empty")
 
 		return msg, errors.New("Required params not found")
 	}
