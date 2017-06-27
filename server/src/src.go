@@ -41,13 +41,13 @@ func runGin(appConfig config.AppConfig) {
 	r := gin.New()
 	metrics.AddHandler(r)
 
-	r.Run(":" + appConfig.Server.HttpPort)
+	r.Run(appConfig.Server.Host + ":" + appConfig.Server.HttpPort)
 	log.WithField("port", appConfig.Server.HttpPort).Info("service port")
 }
 
 func runRPC(appConfig config.AppConfig) {
 
-	l, err := net.Listen("tcp", ":"+appConfig.Server.RPCPort)
+	l, err := net.Listen("tcp", appConfig.Server.Host+":"+appConfig.Server.RPCPort)
 	if err != nil {
 		log.Fatal("netListen ", err.Error())
 	} else {
